@@ -7,10 +7,11 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"os"
 )
 
 func main() {
-	var id, resource string
+	var id, resource, output string
 	var outputToFile bool
 	flag.StringVar(&resource, "resource", "",
 		"Name of the resource to generate tf config for. Use '*' for all resources. Default: * ."+
@@ -25,15 +26,17 @@ func main() {
 		panic(err)
 	}
 	c := cfg.Client()
+	ctx := context.Background()
+
+	doFilter := id != "" && id != "*"
 
 	if resource == "pipeline_template" {
-		ctx := context.Background()
 		templates, _, err := c.PipelineTemplates.List(ctx)
 		if err != nil {
 			panic(err)
 		}
 
-		if id != "" && id != "*" {
+		if doFilter {
 			for _, template := range templates {
 				if template.Name == id {
 					templates = []*gocd.PipelineTemplate{template}
@@ -48,13 +51,47 @@ func main() {
 			if err != nil {
 				panic(err)
 			}
-			output, err := generator.RenderPipelineTemplate(template)
-			if outputToFile {
-				ioutil.WriteFile(template.Name+".tf", []byte(output), 0644)
-			} else {
-				fmt.Println(output)
+			output, err = generator.RenderPipelineTemplate(template)
+
+			writeOutput(outputToFile, template.Name, []byte(output))
+		}
+	} else if resource == "pipeline" {
+		pipelinesGroups, _, err := c.PipelineGroups.List(ctx, "")
+		if err != nil {
+			panic(err)
+		}
+
+		for _, group := range (*pipelinesGroups) {
+			for _, pipeline := range group.Pipelines {
+				if doFilter {
+					if pipeline.Name == id {
+						pipelineCfg, _, err := c.PipelineConfigs.Get(ctx, pipeline.Name)
+						if err != nil {
+							panic(err)
+						}
+						output, err = generator.RenderPipeline(pipelineCfg, group.Name)
+						if err := writeOutput(outputToFile, pipelineCfg.Name, []byte(output)); err != nil {
+							os.Exit(1)
+						}
+						os.Exit(0)
+					}
+				}
 			}
 		}
+
 	}
 
+}
+
+func writeOutput(outputToFile bool, name string, output []byte) error {
+	if outputToFile {
+		if err := ioutil.WriteFile(name+".tf", output, 0644); err != nil {
+			return err
+		}
+	} else {
+		if _, err := fmt.Println(string(output)); err != nil {
+			return err
+		}
+	}
+	return nil
 }

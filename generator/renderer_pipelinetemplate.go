@@ -5,22 +5,15 @@ import (
 	"text/template"
 	"bytes"
 	"strings"
+	"fmt"
 )
 
-func RenderPipelineTemplate(pt *gocd.PipelineTemplate) (string, error) {
-	tplt := `## START pipeline_template.{{.Name}}
-# CMD terraform import gocd_pipeline_template.{{.Name}} "{{.Name}}"
-{{$template := .Name -}}
-resource "gocd_pipeline_template" "{{.Name}}" {
-  name = "{{$template}}"
-}
-
-{{range .Stages}}
+const STAGE_TEMPLATE = `{{range .Stages}}
 {{$stage := .Name -}}
 # CMD terraform import gocd_pipeline_stage.{{.Name}} "{{.Name}}"
 resource "gocd_pipeline_stage" "{{.Name}}" {
   name = "{{.Name}}"{{if .FetchMaterials}}
-  pipeline_template = "{{$template}}"
+  pipeline_template = "{{$containerName}}"
   fetch_materials = {{.FetchMaterials}}{{end}}{{if .CleanWorkingDirectory}}
   clean_working_directory = {{.CleanWorkingDirectory}}{{end}}{{if .NeverCleanupArtifacts}}
   never_cleanup_artifacts = {{.NeverCleanupArtifacts}}{{end}}{{if .Jobs}}
@@ -33,7 +26,7 @@ resource "gocd_pipeline_stage" "{{.Name}}" {
 data "gocd_job_definition" "{{.Name}}" {
   name = "{{.Name}}"
   tasks = [{{range $i, $e := .Tasks}}
-    "${data.gocd_task_definition.{{$template}}_{{$stage}}_{{$job}}_{{$i}}.json}",{{end}}
+    "${data.gocd_task_definition.{{$containerName}}_{{$stage}}_{{$job}}_{{$i}}.json}",{{end}}
   ]
   {{if .Timeout -}}timeout = {{.Timeout}}
   {{- end}}{{if .EnvironmentVariables -}}
@@ -64,10 +57,10 @@ data "gocd_job_definition" "{{.Name}}" {
   ]{{- end}}
 }
 {{range $i, $task := .Tasks -}}
-data "gocd_task_definition" "{{$template}}_{{$stage}}_{{$job}}_{{$i}}" {
-  type = "{{.Type}}"{{with .Attributes}}
+data "gocd_task_definition" "{{$containerName}}_{{$stage}}_{{$job}}_{{$i}}" {
+  type = "{{.Type}}"{{with .Attributes}}{{if .RunIf}}
   run_if = [
-	{{.RunIf | stringJoin -}}]{{if .Command}}
+	{{.RunIf | stringJoin -}}]{{if .Command}}{{end}}
   command = "{{.Command}}"{{end}}{{if .Arguments}}
   arguments = [
     {{.Arguments | stringJoin -}}]{{end}}{{if .WorkingDirectory}}
@@ -82,8 +75,18 @@ data "gocd_task_definition" "{{$template}}_{{$stage}}_{{$job}}_{{$i}}" {
 {{end}}}
 {{end -}}
 {{end}}
-{{- end}}
-## END`
+{{- end}}`
+
+func RenderPipelineTemplate(pt *gocd.PipelineTemplate) (string, error) {
+	tplt := fmt.Sprintf(`## START pipeline_template.{{.Name}}
+# CMD terraform import gocd_pipeline_template.{{.Name}} "{{.Name}}"
+{{$containerName := .Name -}}
+resource "gocd_pipeline_template" "{{.Name}}" {
+  name = "{{$containerName}}"
+}
+
+%s
+## END`, STAGE_TEMPLATE)
 
 	fmap := template.FuncMap{
 		"stringJoin": func(s []string) (string, error) {
