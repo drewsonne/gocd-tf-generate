@@ -1,8 +1,8 @@
 hash: cda3b9b76a4963ea17a6d17f863e6f676e835d87294901747236f3564f67e07f
-updated: 2017-09-10T15:56:19.188825824+01:00
+updated: 2017-09-10T16:42:57.859333381+01:00
 imports:
 - name: github.com/drewsonne/go-gocd
-  version: 6397adf62bdfdaf564307b209c1a4326bbc33609
+  version: a630baf7f541a54c7e57ef31c298102db46524e5
   subpackages:
   - gocd
 - name: github.com/pkg/errors

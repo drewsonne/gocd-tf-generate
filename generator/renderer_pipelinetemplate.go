@@ -35,7 +35,7 @@ data "gocd_job_definition" "{{.Name}}" {
 	{{end}}]
   {{- end}}{{if .Resources -}}
   resources = [{{.Resources | stringJoin -}}]{{end -}}{{if .ElasticProfileId}}
-  elastic_profile_id = "{{ .ElasticProfileId }}"{{end}}{{if .Tabs}}
+  elastic_profile_id = "{{ .ElasticProfileID }}"{{end}}{{if .Tabs}}
   tabs = [{{range .Tabs}}
     {
       name = "{{.Name}}",

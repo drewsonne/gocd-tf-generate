@@ -24,7 +24,7 @@ type Pipeline struct {
 	EnablePipelineLocking bool                   `json:"enable_pipeline_locking,omitempty"`
 	Template              string                 `json:"template,omitempty"`
 	Origin                *PipelineConfigOrigin  `json:"origin,omitempty"`
-	Parameters            []string               `json:"parameters"`
+	Parameters            []*Parameter           `json:"parameters"`
 	EnvironmentVariables  []*EnvironmentVariable `json:"environment_variables"`
 	Materials             []Material             `json:"materials,omitempty"`
 	Label                 string                 `json:"label,omitempty"`
@@ -32,6 +32,12 @@ type Pipeline struct {
 	Version               string                 `json:"version,omitempty"`
 	//TrackingTool          string                 `json:"tracking_tool"`
 	//Timer                 string                 `json:"timer"`
+}
+
+// Parameter represents a key/value
+type Parameter struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
 }
 
 // PipelineConfigOrigin describes where a pipeline config is being loaded from
@@ -67,6 +73,8 @@ type MaterialAttributes struct {
 	Branch          string          `json:"branch,omitempty"`
 	SubmoduleFolder string          `json:"submodule_folder,omitempty"`
 	ShallowClone    bool            `json:"shallow_clone,omitempty"`
+	Pipeline        string          `json:"pipeline,omitempty"`
+	Stage           string          `json:"stage"`
 }
 
 // MaterialFilter describes which globs to ignore

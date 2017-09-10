@@ -35,8 +35,22 @@ type Job struct {
 	Properties           []*JobProperty         `json:"properties,omitempty"`
 	Resources            []string               `json:"resources,omitempty"`
 	Tasks                []*Task                `json:"tasks,omitempty"`
-	Tabs                 []string               `json:"tabs,omitempty"`
-	Artifacts            []string               `json:"artifacts,omitempty"`
+	Tabs                 []*Tab                 `json:"tabs,omitempty"`
+	Artifacts            []*Artifact            `json:"artifacts,omitempty"`
+	ElasticProfileID     string                 `json:"elastic_profile_id,omitempty"`
+}
+
+// Artifact describes the result of a job
+type Artifact struct {
+	Type        string `json:"type"`
+	Source      string `json:"source"`
+	Destination string `json:"destination"`
+}
+
+// Tab description in a gocd job
+type Tab struct {
+	Name string `json:"name"`
+	Path string `json:"path"`
 }
 
 // JobProperty describes the property for a job

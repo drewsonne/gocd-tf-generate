@@ -7,7 +7,7 @@ import:
   version: 1.20.0
 - package: gopkg.in/yaml.v2
 testImport:
-- package: github.com/stretchr/testify
-  version: ^1.1.4
+- package: github.com/goreleaser/goreleaser
+  version: ^0.30.0
   subpackages:
   - assert
