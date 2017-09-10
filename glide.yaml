@@ -4,3 +4,8 @@ import:
   version: ^0.3.21
   subpackages:
   - gocd
+testImport:
+- package: github.com/goreleaser/goreleaser
+  version: ^0.30.0
+  subpackages:
+  - assert

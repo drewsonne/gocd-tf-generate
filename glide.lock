@@ -1,5 +1,5 @@
-hash: 616f43ed83d9c22b428a9731ced4c0b30b5ca57e3fcd1d37fbbf320a2310e0d5
-updated: 2017-09-10T15:51:13.626421691+01:00
+hash: cda3b9b76a4963ea17a6d17f863e6f676e835d87294901747236f3564f67e07f
+updated: 2017-09-10T15:56:19.188825824+01:00
 imports:
 - name: github.com/drewsonne/go-gocd
   version: 6397adf62bdfdaf564307b209c1a4326bbc33609
@@ -9,4 +9,8 @@ imports:
   version: 645ef00459ed84a119197bfb8d8205042c6df63d
 - name: gopkg.in/yaml.v2
   version: eb3733d160e74a9c7e442f435eb3bea458e1d19f
-testImports: []
+testImports:
+- name: github.com/goreleaser/goreleaser
+  version: 272bd93a31d45a4fc41f6dca3a0776dae39325d1
+  subpackages:
+  - assert
