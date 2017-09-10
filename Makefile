@@ -1,3 +1,9 @@
+build:
+	go build
+
+install:
+	go install
+
 deploy_on_tag:
 	go get github.com/goreleaser/goreleaser
 	gem install --no-ri --no-rdoc -v "1.8.1" fpm
