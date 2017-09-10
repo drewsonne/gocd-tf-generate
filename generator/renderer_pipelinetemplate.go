@@ -24,31 +24,30 @@ resource "gocd_pipeline_stage" "{{.Name}}" {
 {{range .Jobs -}}
 {{$job := .Name -}}
 data "gocd_job_definition" "{{.Name}}" {
-  name = "{{.Name}}"
+  name = "{{.Name}}"{{if .Tasks}}
   tasks = [{{range $i, $e := .Tasks}}
     "${data.gocd_task_definition.{{$containerName}}_{{$stage}}_{{$job}}_{{$i}}.json}",{{end}}
-  ]
-  {{if .Timeout -}}timeout = {{.Timeout}}
-  {{- end}}{{if .EnvironmentVariables -}}
+  ]{{end}}{{if .Timeout}}
+  timeout = {{.Timeout}}{{end}}{{if .EnvironmentVariables -}}
   environment_variables = [{{range .EnvironmentVariables}}
 	{}
 	{{end}}]
   {{- end}}{{if .Resources -}}
-  resources = [{{.Resources | stringJoin -}}]{{end -}}{{if .ElasticProfileId}}
+  resources = [{{.Resources | stringJoin -}}]{{end -}}{{if .ElasticProfileID}}
   elastic_profile_id = "{{ .ElasticProfileID }}"{{end}}{{if .Tabs}}
   tabs = [{{range .Tabs}}
     {
       name = "{{.Name}}",
       path = "{{.Path}}"
     },{{end}}
-  ]{{end}}
+  ]{{end}}{{if .Artifacts}}
   artifacts = [{{range .Artifacts}}
     {
       type = "{{.Type}}",
       source = "{{.Source}}",{{if .Destination}}
       destination = "{{.Destination}}"{{end}}
     }, {{end}}
-  ]{{if .Properties -}}
+  ]{{end}}{{if .Properties -}}
   properties = [{{range .Properties}}{
       name = "{{.Name}}",
       source = "{{.Source}}",
@@ -104,7 +103,9 @@ resource "gocd_pipeline_template" "{{.Name}}" {
 	}
 
 	w := new(bytes.Buffer)
-	t.Execute(w, pt)
+	if err := t.Execute(w, pt); err != nil {
+		return "", err
+	}
 
 	return w.String(), nil
 }

@@ -52,7 +52,9 @@ func main() {
 				panic(err)
 			}
 			output, err = generator.RenderPipelineTemplate(template)
-
+			if err != nil {
+				panic(err)
+			}
 			writeOutput(outputToFile, template.Name, []byte(output))
 		}
 	} else if resource == "pipeline" {
@@ -70,6 +72,9 @@ func main() {
 							panic(err)
 						}
 						output, err = generator.RenderPipeline(pipelineCfg, group.Name)
+						if err != nil {
+							panic(err)
+						}
 						if err := writeOutput(outputToFile, pipelineCfg.Name, []byte(output)); err != nil {
 							os.Exit(1)
 						}

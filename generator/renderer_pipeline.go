@@ -71,7 +71,9 @@ resource "gocd_pipeline" "{{.Name}}" {
 	}
 
 	w := new(bytes.Buffer)
-	t.Execute(w, pt)
+	if err := t.Execute(w, pt); err != nil {
+		return "", err
+	}
 
 	return w.String(), nil
 }
