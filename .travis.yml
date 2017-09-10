@@ -29,13 +29,11 @@ after_success:
 
 deploy:
   - provider: script
-    skip_cleanup: true
     script: make deploy_on_tag
     on:
       tags: true
       condition: $TRAVIS_GO_VERSION =~ ^1\.9(\.[0-9]+)?$
   - provider: script
-    skip_cleanup: true
     script: make deploy_on_develop
     on:
       branch: develop
