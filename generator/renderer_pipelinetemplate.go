@@ -29,10 +29,11 @@ resource "gocd_pipeline_stage" "{{.Name}}" {
   ]{{end}}
 }
 {{range .Jobs -}}
+{{$job := .Name -}}
 data "gocd_job_definition" "{{.Name}}" {
   name = "{{.Name}}"
   tasks = [{{range $i, $e := .Tasks}}
-    "${data.gocd_task_definition.{{$stage}}_{{$i}}.json}",{{end}}
+    "${data.gocd_task_definition.{{$template}}_{{$stage}}_{{$job}}_{{$i}}.json}",{{end}}
   ]
   {{if .Timeout -}}timeout = {{.Timeout}}
   {{- end}}{{if .EnvironmentVariables -}}
@@ -63,7 +64,7 @@ data "gocd_job_definition" "{{.Name}}" {
   ]{{- end}}
 }
 {{range $i, $task := .Tasks -}}
-data "gocd_task_definition" "{{$stage}}_{{$i}}" {
+data "gocd_task_definition" "{{$template}}_{{$stage}}_{{$job}}_{{$i}}" {
   type = "{{.Type}}"{{with .Attributes}}
   run_if = [
 	{{.RunIf | stringJoin -}}]{{if .Command}}
