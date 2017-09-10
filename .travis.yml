@@ -1,0 +1,42 @@
+language: go
+go:
+  - 1.7.x
+  - 1.8.x
+  - 1.9.x
+  - release
+  - tip
+
+addons:
+  apt:
+    packages:
+    - rpm
+
+matrix:
+  allow_failures:
+    - go: release
+    - go: tip
+  fast_finish: true
+
+#before_install:
+#  - make before_install
+
+#script:
+#  - go generate -x $(go list ./... | grep -v vendor/) && git diff --exit-code; code=$?; git checkout -- .; (exit	$code)
+#  - make test
+
+#after_success:
+#  - bash <(curl -s https://codecov.io/bash)
+
+deploy:
+  - provider: script
+    skip_cleanup: true
+    script: make deploy_on_tag
+    on:
+      tags: true
+      condition: $TRAVIS_GO_VERSION =~ ^1\.9(\.[0-9]+)?$
+  - provider: script
+    skip_cleanup: true
+    script: make deploy_on_develop
+    on:
+      branch: develop
+      condition: $TRAVIS_GO_VERSION =~ ^1\.9(\.[0-9]+)?$
