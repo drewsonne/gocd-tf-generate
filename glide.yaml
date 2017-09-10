@@ -1,0 +1,6 @@
+package: github.com/drewsonne/gocd-tf-generate
+import:
+- package: github.com/drewsonne/go-gocd
+  version: ^0.3.21
+  subpackages:
+  - gocd
