@@ -61,5 +61,7 @@ brew:
     owner: drewsonne
     name: homebrew-devops
   homepage: https://github.com/drewsonne/gocd-tf-generate
+  dependencies:
+    - drewsonne/tap/go-gocd
   test: |
     system "#{bin}/gocd-tf-generate"
