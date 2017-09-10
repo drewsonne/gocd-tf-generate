@@ -44,7 +44,6 @@ archive:
   files:
     - LICENSE
     - README.md
-    - CHANGELOG.md
 
 fpm:
   homepage: https://github.com/drewsonne/gocd-tf-generate
