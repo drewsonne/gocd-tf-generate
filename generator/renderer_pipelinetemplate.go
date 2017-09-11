@@ -13,7 +13,7 @@ const STAGE_TEMPLATE = `{{range .Stages}}
 # CMD terraform import gocd_pipeline_stage.{{.Name}} "{{.Name}}"
 resource "gocd_pipeline_stage" "{{.Name}}" {
   name = "{{.Name}}"{{if .FetchMaterials}}
-  pipeline_template = "{{$containerName}}"
+  %s = "{{$containerName}}"
   fetch_materials = {{.FetchMaterials}}{{end}}{{if .CleanWorkingDirectory}}
   clean_working_directory = {{.CleanWorkingDirectory}}{{end}}{{if .NeverCleanupArtifacts}}
   never_cleanup_artifacts = {{.NeverCleanupArtifacts}}{{end}}{{if .Jobs}}
@@ -85,7 +85,7 @@ resource "gocd_pipeline_template" "{{.Name}}" {
 }
 
 %s
-## END`, STAGE_TEMPLATE)
+## END`, fmt.Sprintf(STAGE_TEMPLATE,"pipeline_template"))
 
 	fmap := template.FuncMap{
 		"stringJoin": func(s []string) (string, error) {
