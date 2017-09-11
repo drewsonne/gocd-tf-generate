@@ -20,11 +20,10 @@ resource "gocd_pipeline" "{{.Name}}" {
   label_template  = "{{.LabelTemplate | escapeDollar}}"{{end}}{{if .EnablePipelineLocking}}
   enable_pipeline_locking = "{{.EnablePipelineLocking}}"{{end}}{{if .Label}}
   label = "{{.Label}}"{{end}}{{if .Parameters}}
-  parameters = [{{range .Parameters}}{
-      name = "{{.Name}}",
-      value = "{{.Value}}"
-    }, {{end}}
-  ]{{end}}{{if .EnvironmentVariables}}
+  parameters { {{range .Parameters}}
+      {{.Name}} = "{{.Value}}",
+  {{end}} }
+  {{end}}{{if .EnvironmentVariables}}
   environment_variables = [{{range .EnvironmentVariables}}{
       name = "{{.Name}}",{{if .Value}}
       value = "{{.Value}}"{{end}}{{if .EncryptedValue}}
