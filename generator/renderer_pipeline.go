@@ -16,7 +16,7 @@ resource "gocd_pipeline" "{{.Name}}" {
   name = "{{$containerName}}"
   group = "%s"{{if .Template}}
   template = "{{.Template}}"{{end}}{{if .LabelTemplate}}
-  label_template  = "{{.LabelTemplate}}"{{end}}{{if .EnablePipelineLocking}}
+  label_template  = "{{.LabelTemplate | escapeDollar}}"{{end}}{{if .EnablePipelineLocking}}
   enable_pipeline_locking = "{{.EnablePipelineLocking}}"{{end}}{{if .Label}}
   label = "{{.Label}}"{{end}}{{if .Parameters}}
   parameters = [{{range .Parameters}}{
@@ -38,7 +38,9 @@ resource "gocd_pipeline" "{{.Name}}" {
       attributes { {{with .Attributes}}{{if .URL}}
         url = "{{.URL}}"{{end}}{{if .Destination}}
         destination = "{{.Destination}}"{{end}}{{if .Filter}}
-        filter = ""{{end}}{{if .InvertFilter}}
+        filter = {
+          ignore = [{{.Filter.Ignore | stringJoin -}}]
+        }{{end}}{{if .InvertFilter}}
         invert_filter = {{.InvertFilter}}{{end}}{{if .Name}}
         name = "{{.Name}}"{{end}}{{if .Branch}}
         branch = "{{.Branch}}"{{end}}{{if .SubmoduleFolder}}
@@ -53,14 +55,18 @@ resource "gocd_pipeline" "{{.Name}}" {
 }
 
 %s
-## END`, group, STAGE_TEMPLATE)
+## END`, group, fmt.Sprintf(STAGE_TEMPLATE, "pipeline"))
 
 	fmap := template.FuncMap{
 		"stringJoin": func(s []string) (string, error) {
 			if len(s) > 0 {
-				return "\"" + strings.Join(s, "\",\n\"") + "\"", nil
+				return "\"" + strings.Join(s, "\", \"") + "\"", nil
 			}
 			return "", nil
+		},
+		"escapeDollar": func(s string) (string, error) {
+			str := strings.Replace(s, "$", "$$", -1)
+			return str, nil
 		},
 	}
 	t, err := template.New("pipeline").
