@@ -12,10 +12,11 @@ func RenderPipeline(pt *gocd.Pipeline, group string) (string, error) {
 	tplt := fmt.Sprintf(`## START pipeline.{{.Name}}
 # CMD terraform import gocd_pipeline.{{.Name}} "{{.Name}}"
 {{$containerName := .Name -}}
+{{$defaultLabel := "${COUNT}"}}
 resource "gocd_pipeline" "{{.Name}}" {
   name = "{{$containerName}}"
   group = "%s"{{if .Template}}
-  template = "{{.Template}}"{{end}}{{if .LabelTemplate}}
+  template = "{{.Template}}"{{end}}{{if ne .LabelTemplate $defaultLabel}}
   label_template  = "{{.LabelTemplate | escapeDollar}}"{{end}}{{if .EnablePipelineLocking}}
   enable_pipeline_locking = "{{.EnablePipelineLocking}}"{{end}}{{if .Label}}
   label = "{{.Label}}"{{end}}{{if .Parameters}}
