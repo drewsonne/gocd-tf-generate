@@ -10,7 +10,7 @@ import (
 
 const STAGE_TEMPLATE = `{{range .Stages}}
 {{$stage := .Name -}}
-# CMD terraform import gocd_pipeline_stage.{{.Name}} "{{.Name}}"
+# CMD terraform import gocd_pipeline_stage.{{.Name}} "{{$containerType}}/{{$containerName}}/{{.Name}}"
 resource "gocd_pipeline_stage" "{{.Name}}" {
   name = "{{.Name}}"{{if .FetchMaterials}}
   %s = "{{$containerName}}"
@@ -80,6 +80,7 @@ func RenderPipelineTemplate(pt *gocd.PipelineTemplate) (string, error) {
 	tplt := fmt.Sprintf(`## START pipeline_template.{{.Name}}
 # CMD terraform import gocd_pipeline_template.{{.Name}} "{{.Name}}"
 {{$containerName := .Name -}}
+{{$containerType := "pipeline" -}}
 resource "gocd_pipeline_template" "{{.Name}}" {
   name = "{{$containerName}}"
 }

@@ -12,6 +12,7 @@ func RenderPipeline(pt *gocd.Pipeline, group string) (string, error) {
 	tplt := fmt.Sprintf(`## START pipeline.{{.Name}}
 # CMD terraform import gocd_pipeline.{{.Name}} "{{.Name}}"
 {{$containerName := .Name -}}
+{{$containerType := "pipeline" -}}
 {{$defaultLabel := "${COUNT}"}}
 resource "gocd_pipeline" "{{.Name}}" {
   name = "{{$containerName}}"
