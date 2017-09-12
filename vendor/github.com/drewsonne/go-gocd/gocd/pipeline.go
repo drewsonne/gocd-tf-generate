@@ -17,7 +17,7 @@ type PipelineRequest struct {
 
 // Pipeline describes a pipeline object
 type Pipeline struct {
-	Group                 string                 `json:"group"`
+	Group                 string                 `json:"group,omitempty"`
 	Links                 *PipelineLinks         `json:"_links,omitempty"`
 	Name                  string                 `json:"name"`
 	LabelTemplate         string                 `json:"label_template,omitempty"`
@@ -64,7 +64,7 @@ type Material struct {
 
 // MaterialAttributes describes a material type
 type MaterialAttributes struct {
-	URL             string          `json:"url"`
+	URL             string          `json:"url,omitempty"`
 	Destination     string          `json:"destination,omitempty"`
 	Filter          *MaterialFilter `json:"filter,omitempty"`
 	InvertFilter    bool            `json:"invert_filter"`
@@ -74,7 +74,7 @@ type MaterialAttributes struct {
 	SubmoduleFolder string          `json:"submodule_folder,omitempty"`
 	ShallowClone    bool            `json:"shallow_clone,omitempty"`
 	Pipeline        string          `json:"pipeline,omitempty"`
-	Stage           string          `json:"stage"`
+	Stage           string          `json:"stage,omitempty"`
 }
 
 // MaterialFilter describes which globs to ignore

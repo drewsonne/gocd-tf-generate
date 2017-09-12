@@ -29,9 +29,12 @@ data "gocd_job_definition" "{{.Name}}" {
     "${data.gocd_task_definition.{{$containerName}}_{{$stage}}_{{$job}}_{{$i}}.json}",{{end}}
   ]{{end}}{{if .Timeout}}
   timeout = {{.Timeout}}{{end}}{{if .EnvironmentVariables -}}
-  environment_variables = [{{range .EnvironmentVariables}}
-	{}
-	{{end}}]
+  environment_variables = [{{range .EnvironmentVariables}}{
+    name = "{{.Name}}"{{if .Value}}
+    value = "{{.Value}}"{{end}}{{if .EncryptedValue}}
+    encrypted_value = "{{.EncryptedValue}}"{{end}}{{if .Secure}}
+    secure = {{.Secure}}{{end}}
+  }{{end}}]
   {{- end}}{{if .Resources -}}
   resources = [{{.Resources | stringJoin -}}]{{end -}}{{if .ElasticProfileID}}
   elastic_profile_id = "{{ .ElasticProfileID }}"{{end}}{{if .Tabs}}
@@ -80,7 +83,7 @@ func RenderPipelineTemplate(pt *gocd.PipelineTemplate) (string, error) {
 	tplt := fmt.Sprintf(`## START pipeline_template.{{.Name}}
 # CMD terraform import gocd_pipeline_template.{{.Name}} "{{.Name}}"
 {{$containerName := .Name -}}
-{{$containerType := "pipeline" -}}
+{{$containerType := "template" -}}
 resource "gocd_pipeline_template" "{{.Name}}" {
   name = "{{$containerName}}"
 }
