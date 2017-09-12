@@ -4,21 +4,20 @@ import (
 	"github.com/drewsonne/go-gocd/gocd"
 	"text/template"
 	"bytes"
-	"strings"
 	"fmt"
 )
 
 const STAGE_TEMPLATE = `{{range .Stages}}
 {{$stage := .Name -}}
-# CMD terraform import gocd_pipeline_stage.{{.Name}} "{{$containerType}}/{{$containerName}}/{{.Name}}"
-resource "gocd_pipeline_stage" "{{.Name}}" {
+#CMD: terraform import gocd_pipeline_stage.{{$containerName}}_{{.Name}} "{{$containerType}}/{{$containerName}}/{{.Name}}";
+resource "gocd_pipeline_stage" "{{$containerName}}_{{.Name}}" {
   name = "{{.Name}}"{{if .FetchMaterials}}
   %s = "{{$containerName}}"
   fetch_materials = {{.FetchMaterials}}{{end}}{{if .CleanWorkingDirectory}}
   clean_working_directory = {{.CleanWorkingDirectory}}{{end}}{{if .NeverCleanupArtifacts}}
   never_cleanup_artifacts = {{.NeverCleanupArtifacts}}{{end}}{{if .Jobs}}
   jobs = [{{range .Jobs}}
-    "${data.gocd_job_definition.{{.Name}}.json}"{{end}}
+    "${data.gocd_job_definition.{{$containerName}}_{{$stage}}_{{.Name}}.json}"{{end}}
   ]{{end}}{{if .EnvironmentVariables}}
   environment_variables = [{{range .EnvironmentVariables}}
     {
@@ -31,7 +30,7 @@ resource "gocd_pipeline_stage" "{{.Name}}" {
 }
 {{range .Jobs -}}
 {{$job := .Name -}}
-data "gocd_job_definition" "{{.Name}}" {
+data "gocd_job_definition" "{{$containerName}}_{{$stage}}_{{.Name}}" {
   name = "{{.Name}}"{{if .Tasks}}
   tasks = [{{range $i, $e := .Tasks}}
     "${data.gocd_task_definition.{{$containerName}}_{{$stage}}_{{$job}}_{{$i}}.json}",{{end}}
@@ -89,7 +88,7 @@ data "gocd_task_definition" "{{$containerName}}_{{$stage}}_{{$job}}_{{$i}}" {
 
 func RenderPipelineTemplate(pt *gocd.PipelineTemplate) (string, error) {
 	tplt := fmt.Sprintf(`## START pipeline_template.{{.Name}}
-# CMD terraform import gocd_pipeline_template.{{.Name}} "{{.Name}}"
+#CMD: terraform import gocd_pipeline_template.{{.Name}} "{{.Name}}";
 {{$containerName := .Name -}}
 {{$containerType := "template" -}}
 resource "gocd_pipeline_template" "{{.Name}}" {
@@ -97,15 +96,10 @@ resource "gocd_pipeline_template" "{{.Name}}" {
 }
 
 %s
-## END`, fmt.Sprintf(STAGE_TEMPLATE,"pipeline_template"))
+## END`, fmt.Sprintf(STAGE_TEMPLATE, "pipeline_template"))
 
 	fmap := template.FuncMap{
-		"stringJoin": func(s []string) (string, error) {
-			if len(s) > 0 {
-				return "\"" + strings.Join(s, "\",\n\"") + "\"", nil
-			}
-			return "", nil
-		},
+		"stringJoin": templateStringJoin,
 	}
 	t, err := template.New("pipeline_template").
 		Funcs(fmap).
