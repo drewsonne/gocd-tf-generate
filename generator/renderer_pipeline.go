@@ -8,7 +8,7 @@ import (
 	"text/template"
 )
 
-func RenderPipeline(pt *gocd.Pipeline, group string) (string, error) {
+func RenderPipeline(pt *gocd.Pipeline, group string, debug bool) (string, error) {
 	tplt := fmt.Sprintf(`## START pipeline.{{.Name}}
 # CMD terraform import gocd_pipeline.{{.Name}} "{{.Name}}"
 {{$containerName := .Name -}}
@@ -70,17 +70,25 @@ resource "gocd_pipeline" "{{.Name}}" {
 			return str, nil
 		},
 	}
+	if debug {
+		fmt.Printf("Generating terraform configuration template...")
+	}
 	t, err := template.New("pipeline").
 		Funcs(fmap).
 		Parse(tplt)
 	if err != nil {
 		return "", err
 	}
+	if debug {
+		fmt.Printf("Generated terraform configuration template.\nRendering template...")
+	}
 
 	w := new(bytes.Buffer)
 	if err := t.Execute(w, pt); err != nil {
 		return "", err
 	}
-
+	if debug {
+		fmt.Printf("Template rendered.")
+	}
 	return w.String(), nil
 }
