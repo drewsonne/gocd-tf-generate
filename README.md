@@ -26,6 +26,6 @@ and place the binary in your `$PATH`.
 
 Each generated terraform config has an import statement prefix with "CMD". You can extract all the import commands with:
 
-    $ grep -r CMD . | sed 's/^.*CMD //p'
+    $ grep -r CMD . | sed 's/^.*CMD: //p'
 
 in the directory you are generating your configs in.
