@@ -12,13 +12,14 @@ import (
 
 func main() {
 	var id, resource, output string
-	var outputToFile bool
+	var outputToFile, debug bool
 	flag.StringVar(&resource, "resource", "",
 		"Name of the resource to generate tf config for. Use '*' for all resources. Default: * ."+
 			"Allowed Values: (pipeline_template)")
 	flag.StringVar(&id, "id", "*",
 		"Specify the ID of the resource to generate a specific resource. Omit this to generate all.")
 	flag.BoolVar(&outputToFile, "to-file", false, "If supplied, output to file.")
+	flag.BoolVar(&debug, "debug", false, "Print debug logging")
 	flag.Parse()
 
 	cfg, err := gocd.LoadConfig()
@@ -30,13 +31,22 @@ func main() {
 
 	doFilter := id != "" && id != "*"
 
+	if debug {
+		fmt.Printf("Searching for resource: `%s`\n", resource)
+	}
 	if resource == "pipeline_template" {
+		if debug {
+			fmt.Printf("Listing pipeline templates...")
+		}
 		templates, _, err := c.PipelineTemplates.List(ctx)
 		if err != nil {
 			panic(err)
 		}
 
 		if doFilter {
+			if debug {
+				fmt.Printf("Searching for '%s' with id '%s'\n", resource, id)
+			}
 			for _, template := range templates {
 				if template.Name == id {
 					templates = []*gocd.PipelineTemplate{template}
@@ -58,21 +68,29 @@ func main() {
 			writeOutput(outputToFile, template.Name, []byte(output))
 		}
 	} else if resource == "pipeline" {
+		if debug {
+			fmt.Printf("Listing pipelne groups...\n")
+		}
 		pipelinesGroups, _, err := c.PipelineGroups.List(ctx, "")
 		if err != nil {
 			panic(err)
 		}
 
 		for _, group := range (*pipelinesGroups) {
+			if debug {
+				fmt.Printf("Searching group '%s' for pipeline with id '%s'.\n", group.Name, id)
+			}
 			for _, pipeline := range group.Pipelines {
 				if doFilter {
 					if pipeline.Name == id {
+						if debug {
+							fmt.Printf("Getting config for pipeline '%s.%s'", group.Name, pipeline.Name)
+						}
 						pipelineCfg, _, err := c.PipelineConfigs.Get(ctx, pipeline.Name)
 						if err != nil {
 							panic(err)
 						}
-						output, err = generator.RenderPipeline(pipelineCfg, group.Name)
-						if err != nil {
+						if output, err = generator.RenderPipeline(pipelineCfg, group.Name, debug); err != nil {
 							panic(err)
 						}
 						if err := writeOutput(outputToFile, pipelineCfg.Name, []byte(output)); err != nil {
@@ -85,7 +103,7 @@ func main() {
 					if err != nil {
 						panic(err)
 					}
-					output, err = generator.RenderPipeline(pipelineCfg, group.Name)
+					output, err = generator.RenderPipeline(pipelineCfg, group.Name, debug)
 					if err != nil {
 						panic(err)
 					}

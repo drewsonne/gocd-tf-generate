@@ -19,6 +19,14 @@ resource "gocd_pipeline_stage" "{{.Name}}" {
   never_cleanup_artifacts = {{.NeverCleanupArtifacts}}{{end}}{{if .Jobs}}
   jobs = [{{range .Jobs}}
     "${data.gocd_job_definition.{{.Name}}.json}"{{end}}
+  ]{{end}}{{if .EnvironmentVariables}}
+  environment_variables = [{{range .EnvironmentVariables}}
+    {
+      name = "{{.Name}}"{{if .Value}}
+      value = "{{.Value}}"{{end}}{{if .EncryptedValue}}
+      encrypted_value = "{{.EncryptedValue}}"{{end}}{{if .Secure}}
+      secure = {{.Secure}}{{end}}
+    },{{end}}
   ]{{end}}
 }
 {{range .Jobs -}}
@@ -35,8 +43,8 @@ data "gocd_job_definition" "{{.Name}}" {
     encrypted_value = "{{.EncryptedValue}}"{{end}}{{if .Secure}}
     secure = {{.Secure}}{{end}}
   }{{end}}]
-  {{- end}}{{if .Resources -}}
-  resources = [{{.Resources | stringJoin -}}]{{end -}}{{if .ElasticProfileID}}
+  {{- end}}{{if .Resources}}
+  resources = [{{.Resources | stringJoin -}}]{{end}}{{if .ElasticProfileID}}
   elastic_profile_id = "{{ .ElasticProfileID }}"{{end}}{{if .Tabs}}
   tabs = [{{range .Tabs}}
     {
