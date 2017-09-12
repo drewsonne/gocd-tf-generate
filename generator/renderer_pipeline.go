@@ -59,12 +59,7 @@ resource "gocd_pipeline" "{{.Name}}" {
 ## END`, group, fmt.Sprintf(STAGE_TEMPLATE, "pipeline"))
 
 	fmap := template.FuncMap{
-		"stringJoin": func(s []string) (string, error) {
-			if len(s) > 0 {
-				return "\"" + strings.Join(s, "\", \"") + "\"", nil
-			}
-			return "", nil
-		},
+		"stringJoin": templateStringJoin,
 		"escapeDollar": func(s string) (string, error) {
 			str := strings.Replace(s, "$", "$$", -1)
 			return str, nil

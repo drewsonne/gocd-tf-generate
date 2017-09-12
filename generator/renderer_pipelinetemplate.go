@@ -4,13 +4,12 @@ import (
 	"github.com/drewsonne/go-gocd/gocd"
 	"text/template"
 	"bytes"
-	"strings"
 	"fmt"
 )
 
 const STAGE_TEMPLATE = `{{range .Stages}}
 {{$stage := .Name -}}
-#CMD: terraform import gocd_pipeline_stage.{{.Name}} "{{$containerType}}/{{$containerName}}/{{.Name}}";
+#CMD: terraform import gocd_pipeline_stage.{{$containerName}}_{{.Name}} "{{$containerType}}/{{$containerName}}/{{.Name}}";
 resource "gocd_pipeline_stage" "{{$containerName}}_{{.Name}}" {
   name = "{{.Name}}"{{if .FetchMaterials}}
   %s = "{{$containerName}}"
@@ -100,18 +99,7 @@ resource "gocd_pipeline_template" "{{.Name}}" {
 ## END`, fmt.Sprintf(STAGE_TEMPLATE, "pipeline_template"))
 
 	fmap := template.FuncMap{
-		"stringJoin": func(rawStrings []string) (string, error) {
-			if len(rawStrings) > 0 {
-				escapedStrings := []string{}
-				for _, rawString := range rawStrings {
-					escapedString := strings.Replace(rawString, "\"", "\\\"", -1)
-					escapedString = strings.Replace(escapedString, "$", "$$", -1)
-					escapedStrings = append(escapedStrings, escapedString)
-				}
-				return "\"" + strings.Join(escapedStrings, "\",\n\"") + "\"", nil
-			}
-			return "", nil
-		},
+		"stringJoin": templateStringJoin,
 	}
 	t, err := template.New("pipeline_template").
 		Funcs(fmap).
