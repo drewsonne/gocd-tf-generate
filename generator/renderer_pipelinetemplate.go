@@ -97,12 +97,16 @@ resource "gocd_pipeline_template" "{{.Name}}" {
 }
 
 %s
-## END`, fmt.Sprintf(STAGE_TEMPLATE,"pipeline_template"))
+## END`, fmt.Sprintf(STAGE_TEMPLATE, "pipeline_template"))
 
 	fmap := template.FuncMap{
-		"stringJoin": func(s []string) (string, error) {
-			if len(s) > 0 {
-				return "\"" + strings.Join(s, "\",\n\"") + "\"", nil
+		"stringJoin": func(rawStrings []string) (string, error) {
+			if len(rawStrings) > 0 {
+				escapedStrings := []string{}
+				for _, rawString := range rawStrings {
+					escapedStrings = append(escapedStrings, strings.Replace(rawString, "\"", "\\\"", -1))
+				}
+				return "\"" + strings.Join(escapedStrings, "\",\n\"") + "\"", nil
 			}
 			return "", nil
 		},
