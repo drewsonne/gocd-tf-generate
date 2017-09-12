@@ -10,15 +10,15 @@ import (
 
 const STAGE_TEMPLATE = `{{range .Stages}}
 {{$stage := .Name -}}
-# CMD terraform import gocd_pipeline_stage.{{.Name}} "{{$containerType}}/{{$containerName}}/{{.Name}}"
-resource "gocd_pipeline_stage" "{{.Name}}" {
+#CMD: terraform import gocd_pipeline_stage.{{.Name}} "{{$containerType}}/{{$containerName}}/{{.Name}}";
+resource "gocd_pipeline_stage" "{{$containerName}}_{{.Name}}" {
   name = "{{.Name}}"{{if .FetchMaterials}}
   %s = "{{$containerName}}"
   fetch_materials = {{.FetchMaterials}}{{end}}{{if .CleanWorkingDirectory}}
   clean_working_directory = {{.CleanWorkingDirectory}}{{end}}{{if .NeverCleanupArtifacts}}
   never_cleanup_artifacts = {{.NeverCleanupArtifacts}}{{end}}{{if .Jobs}}
   jobs = [{{range .Jobs}}
-    "${data.gocd_job_definition.{{.Name}}.json}"{{end}}
+    "${data.gocd_job_definition.{{$containerName}}_{{$stage}}_{{.Name}}.json}"{{end}}
   ]{{end}}{{if .EnvironmentVariables}}
   environment_variables = [{{range .EnvironmentVariables}}
     {
@@ -31,7 +31,7 @@ resource "gocd_pipeline_stage" "{{.Name}}" {
 }
 {{range .Jobs -}}
 {{$job := .Name -}}
-data "gocd_job_definition" "{{.Name}}" {
+data "gocd_job_definition" "{{$containerName}}_{{$stage}}_{{.Name}}" {
   name = "{{.Name}}"{{if .Tasks}}
   tasks = [{{range $i, $e := .Tasks}}
     "${data.gocd_task_definition.{{$containerName}}_{{$stage}}_{{$job}}_{{$i}}.json}",{{end}}
@@ -89,7 +89,7 @@ data "gocd_task_definition" "{{$containerName}}_{{$stage}}_{{$job}}_{{$i}}" {
 
 func RenderPipelineTemplate(pt *gocd.PipelineTemplate) (string, error) {
 	tplt := fmt.Sprintf(`## START pipeline_template.{{.Name}}
-# CMD terraform import gocd_pipeline_template.{{.Name}} "{{.Name}}"
+#CMD: terraform import gocd_pipeline_template.{{.Name}} "{{.Name}}";
 {{$containerName := .Name -}}
 {{$containerType := "template" -}}
 resource "gocd_pipeline_template" "{{.Name}}" {
@@ -104,7 +104,9 @@ resource "gocd_pipeline_template" "{{.Name}}" {
 			if len(rawStrings) > 0 {
 				escapedStrings := []string{}
 				for _, rawString := range rawStrings {
-					escapedStrings = append(escapedStrings, strings.Replace(rawString, "\"", "\\\"", -1))
+					escapedString := strings.Replace(rawString, "\"", "\\\"", -1)
+					escapedString = strings.Replace(escapedString, "$", "$$", -1)
+					escapedStrings = append(escapedStrings, escapedString)
 				}
 				return "\"" + strings.Join(escapedStrings, "\",\n\"") + "\"", nil
 			}
