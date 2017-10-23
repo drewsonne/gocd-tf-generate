@@ -24,12 +24,12 @@ func TestPipelineTemplate(t *testing.T) {
 }
 
 func testPipelineTemplateStageContainer(t *testing.T) {
+	var i StageContainer
 
-	pt := &PipelineTemplate{
+	i = &PipelineTemplate{
 		Name:   "mock-name",
 		Stages: []*Stage{{Name: "1"}, {Name: "2"}},
 	}
-	i := StageContainer(pt)
 
 	assert.Equal(t, "mock-name", i.GetName())
 	assert.Len(t, i.GetStages(), 2)
@@ -116,7 +116,7 @@ func testPipelineTemplatePipelines(t *testing.T) {
 }
 
 func tesPipelineTemplateRemoveLinks(t *testing.T) {
-	pt := PipelineTemplate{Links: &PipelineTemplateLinks{}}
+	pt := PipelineTemplate{Links: &HALLinks{}}
 	assert.NotNil(t, pt.Links)
 	pt.RemoveLinks()
 	assert.Nil(t, pt.Links)

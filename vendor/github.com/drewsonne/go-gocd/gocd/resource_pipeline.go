@@ -15,6 +15,16 @@ func (p *Pipeline) GetStage(stageName string) *Stage {
 	return nil
 }
 
+// RemoveLinks from the pipeline object for json marshalling.
+func (p *Pipeline) RemoveLinks() {
+	p.Links = nil
+}
+
+// GetLinks from pipeline
+func (p *Pipeline) GetLinks() *HALLinks {
+	return p.Links
+}
+
 // GetName of the pipeline
 func (p *Pipeline) GetName() string {
 	return p.Name
@@ -39,4 +49,24 @@ func (p *Pipeline) SetStage(newStage *Stage) {
 		}
 	}
 	p.AddStage(newStage)
+}
+
+// SetVersion sets a version string for this pipeline
+func (p *Pipeline) SetVersion(version string) {
+	p.Version = version
+}
+
+// GetVersion retrieves a version string for this pipeline
+func (p *Pipeline) GetVersion() (version string) {
+	return p.Version
+}
+
+// GetVersion of pipeline config
+func (pr *PipelineConfigRequest) GetVersion() (version string) {
+	return pr.Pipeline.GetVersion()
+}
+
+// SetVersion of pipeline config
+func (pr *PipelineConfigRequest) SetVersion(version string) {
+	pr.Pipeline.SetVersion(version)
 }

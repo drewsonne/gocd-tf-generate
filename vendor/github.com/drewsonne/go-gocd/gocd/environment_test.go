@@ -32,10 +32,10 @@ func testEnvironmentList(t *testing.T) {
 
 	assert.NotNil(t, envs)
 
-	assert.NotNil(t, envs.Links.Self)
-	assert.Equal(t, "https://ci.example.com/go/api/admin/environments", envs.Links.Self.String())
-	assert.NotNil(t, envs.Links.Doc)
-	assert.Equal(t, "https://api.gocd.org/#environment-config", envs.Links.Doc.String())
+	assert.NotNil(t, envs.Links.Get("Self"))
+	assert.Equal(t, "https://ci.example.com/go/api/admin/environments", envs.Links.Get("Self").URL.String())
+	assert.NotNil(t, envs.Links.Get("Doc"))
+	assert.Equal(t, "https://api.gocd.org/#environment-config", envs.Links.Get("Doc").URL.String())
 
 	assert.NotNil(t, envs.Embedded)
 	assert.NotNil(t, envs.Embedded.Environments)
@@ -43,9 +43,9 @@ func testEnvironmentList(t *testing.T) {
 
 	env := envs.Embedded.Environments[0]
 	assert.NotNil(t, env.Links)
-	assert.Equal(t, "https://ci.example.com/go/api/admin/environments/foobar", env.Links.Self.String())
-	assert.Equal(t, "https://api.gocd.org/#environment-config", env.Links.Doc.String())
-	assert.Equal(t, "https://ci.example.com/go/api/admin/environments/:environment_name", env.Links.Find.String())
+	assert.Equal(t, "https://ci.example.com/go/api/admin/environments/foobar", env.Links.Get("Self").URL.String())
+	assert.Equal(t, "https://api.gocd.org/#environment-config", env.Links.Get("Doc").URL.String())
+	assert.Equal(t, "https://ci.example.com/go/api/admin/environments/:environment_name", env.Links.Get("Find").URL.String())
 
 	assert.Equal(t, "foobar", env.Name)
 
@@ -54,9 +54,9 @@ func testEnvironmentList(t *testing.T) {
 
 	p := env.Pipelines[0]
 	assert.NotNil(t, p.Links)
-	assert.Equal(t, "https://ci.example.com/go/api/admin/pipelines/up42", p.Links.Self.String())
-	assert.Equal(t, "https://api.gocd.org/#pipeline-config", p.Links.Doc.String())
-	assert.Equal(t, "https://ci.example.com/go/api/admin/pipelines/:pipeline_name", p.Links.Find.String())
+	assert.Equal(t, "https://ci.example.com/go/api/admin/pipelines/up42", p.Links.Get("Self").URL.String())
+	assert.Equal(t, "https://api.gocd.org/#pipeline-config", p.Links.Get("Doc").URL.String())
+	assert.Equal(t, "https://ci.example.com/go/api/admin/pipelines/:pipeline_name", p.Links.Get("Find").URL.String())
 	assert.Equal(t, "up42", p.Name)
 
 	assert.NotNil(t, env.Agents)
@@ -64,9 +64,9 @@ func testEnvironmentList(t *testing.T) {
 
 	a := env.Agents[0]
 	assert.NotNil(t, a.Links)
-	assert.Equal(t, "https://ci.example.com/go/api/agents/adb9540a-b954-4571-9d9b-2f330739d4da", a.Links.Self.String())
-	assert.Equal(t, "https://api.gocd.org/#agents", a.Links.Doc.String())
-	assert.Equal(t, "https://ci.example.com/go/api/agents/:uuid", a.Links.Find.String())
+	assert.Equal(t, "https://ci.example.com/go/api/agents/adb9540a-b954-4571-9d9b-2f330739d4da", a.Links.Get("Self").URL.String())
+	assert.Equal(t, "https://api.gocd.org/#agents", a.Links.Get("Doc").URL.String())
+	assert.Equal(t, "https://ci.example.com/go/api/agents/:uuid", a.Links.Get("Find").URL.String())
 	assert.Equal(t, "12345678-e2f6-4c78-123456789012", a.UUID)
 
 	assert.NotNil(t, env.EnvironmentVariables)

@@ -18,17 +18,15 @@ func TestDescription(t *testing.T) {
 }
 
 func TestNotAGitFolder(t *testing.T) {
-	var assert = assert.New(t)
 	_, back := testlib.Mktmp(t)
 	defer back()
 	var ctx = &context.Context{
 		Config: config.Project{},
 	}
-	assert.Error(Pipe{}.Run(ctx))
+	assert.Error(t, Pipe{}.Run(ctx))
 }
 
 func TestSingleCommit(t *testing.T) {
-	var assert = assert.New(t)
 	_, back := testlib.Mktmp(t)
 	defer back()
 	testlib.GitInit(t)
@@ -38,22 +36,20 @@ func TestSingleCommit(t *testing.T) {
 		Config: config.Project{},
 	}
 	testlib.AssertSkipped(t, Pipe{}.Run(ctx))
-	assert.Equal("v0.0.1", ctx.Git.CurrentTag)
+	assert.Equal(t, "v0.0.1", ctx.Git.CurrentTag)
 }
 
 func TestNewRepository(t *testing.T) {
-	var assert = assert.New(t)
 	_, back := testlib.Mktmp(t)
 	defer back()
 	testlib.GitInit(t)
 	var ctx = &context.Context{
 		Config: config.Project{},
 	}
-	assert.Error(Pipe{}.Run(ctx))
+	assert.Error(t, Pipe{}.Run(ctx))
 }
 
 func TestNoTagsSnapshot(t *testing.T) {
-	assert := assert.New(t)
 	_, back := testlib.Mktmp(t)
 	defer back()
 	testlib.GitInit(t)
@@ -68,11 +64,10 @@ func TestNoTagsSnapshot(t *testing.T) {
 		Publish:  false,
 	}
 	testlib.AssertSkipped(t, Pipe{}.Run(ctx))
-	assert.Contains(ctx.Version, "SNAPSHOT-")
+	assert.Contains(t, ctx.Version, "SNAPSHOT-")
 }
 
 func TestNoTagsSnapshotInvalidTemplate(t *testing.T) {
-	assert := assert.New(t)
 	_, back := testlib.Mktmp(t)
 	defer back()
 	testlib.GitInit(t)
@@ -86,14 +81,13 @@ func TestNoTagsSnapshotInvalidTemplate(t *testing.T) {
 		Snapshot: true,
 		Publish:  false,
 	}
-	assert.Error(Pipe{}.Run(ctx))
+	assert.Error(t, Pipe{}.Run(ctx))
 }
 
 // TestNoTagsNoSnapshot covers the situation where a repository
 // only contains simple commits and no tags. In this case you have
 // to set the --snapshot flag otherwise an error is returned.
 func TestNoTagsNoSnapshot(t *testing.T) {
-	assert := assert.New(t)
 	_, back := testlib.Mktmp(t)
 	defer back()
 	testlib.GitInit(t)
@@ -107,11 +101,10 @@ func TestNoTagsNoSnapshot(t *testing.T) {
 		Snapshot: false,
 		Publish:  false,
 	}
-	assert.Error(Pipe{}.Run(ctx))
+	assert.Error(t, Pipe{}.Run(ctx))
 }
 
 func TestInvalidTagFormat(t *testing.T) {
-	var assert = assert.New(t)
 	_, back := testlib.Mktmp(t)
 	defer back()
 	testlib.GitInit(t)
@@ -121,32 +114,30 @@ func TestInvalidTagFormat(t *testing.T) {
 		Config:   config.Project{},
 		Validate: true,
 	}
-	assert.EqualError(Pipe{}.Run(ctx), "sadasd is not in a valid version format")
-	assert.Equal("sadasd", ctx.Git.CurrentTag)
+	assert.EqualError(t, Pipe{}.Run(ctx), "sadasd is not in a valid version format")
+	assert.Equal(t, "sadasd", ctx.Git.CurrentTag)
 }
 
 func TestDirty(t *testing.T) {
-	var assert = assert.New(t)
 	folder, back := testlib.Mktmp(t)
 	defer back()
 	testlib.GitInit(t)
 	dummy, err := os.Create(filepath.Join(folder, "dummy"))
-	assert.NoError(err)
+	assert.NoError(t, err)
 	testlib.GitAdd(t)
 	testlib.GitCommit(t, "commit2")
 	testlib.GitTag(t, "v0.0.1")
-	assert.NoError(ioutil.WriteFile(dummy.Name(), []byte("lorem ipsum"), 0644))
+	assert.NoError(t, ioutil.WriteFile(dummy.Name(), []byte("lorem ipsum"), 0644))
 	var ctx = &context.Context{
 		Config:   config.Project{},
 		Validate: true,
 	}
 	err = Pipe{}.Run(ctx)
-	assert.Error(err)
-	assert.Contains(err.Error(), "git is currently in a dirty state:")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "git is currently in a dirty state:")
 }
 
 func TestTagIsNotLastCommit(t *testing.T) {
-	var assert = assert.New(t)
 	_, back := testlib.Mktmp(t)
 	defer back()
 	testlib.GitInit(t)
@@ -158,12 +149,11 @@ func TestTagIsNotLastCommit(t *testing.T) {
 		Validate: true,
 	}
 	err := Pipe{}.Run(ctx)
-	assert.Error(err)
-	assert.Contains(err.Error(), "git tag v0.0.1 was not made against commit")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "git tag v0.0.1 was not made against commit")
 }
 
 func TestValidState(t *testing.T) {
-	var assert = assert.New(t)
 	_, back := testlib.Mktmp(t)
 	defer back()
 	testlib.GitInit(t)
@@ -175,10 +165,8 @@ func TestValidState(t *testing.T) {
 		Config:   config.Project{},
 		Validate: true,
 	}
-	assert.NoError(Pipe{}.Run(ctx))
-	assert.Equal("v0.0.2", ctx.Git.CurrentTag)
-	assert.NotContains("commit4", ctx.ReleaseNotes)
-	assert.NotContains("commit3", ctx.ReleaseNotes)
+	assert.NoError(t, Pipe{}.Run(ctx))
+	assert.Equal(t, "v0.0.2", ctx.Git.CurrentTag)
 }
 
 func TestNoValidate(t *testing.T) {
@@ -196,65 +184,16 @@ func TestNoValidate(t *testing.T) {
 	testlib.AssertSkipped(t, Pipe{}.Run(ctx))
 }
 
-func TestChangelog(t *testing.T) {
-	var assert = assert.New(t)
+func TestSnapshot(t *testing.T) {
 	_, back := testlib.Mktmp(t)
 	defer back()
 	testlib.GitInit(t)
-	testlib.GitCommit(t, "first")
-	testlib.GitTag(t, "v0.0.1")
-	testlib.GitCommit(t, "added feature 1")
-	testlib.GitCommit(t, "fixed bug 2")
-	testlib.GitTag(t, "v0.0.2")
+	testlib.GitAdd(t)
+	testlib.GitCommit(t, "whatever")
 	var ctx = &context.Context{
-		Config: config.Project{},
+		Config:   config.Project{},
+		Validate: true,
+		Snapshot: true,
 	}
-	testlib.AssertSkipped(t, Pipe{}.Run(ctx))
-	assert.Equal("v0.0.2", ctx.Git.CurrentTag)
-	assert.Contains(ctx.ReleaseNotes, "## Changelog")
-	assert.NotContains(ctx.ReleaseNotes, "first")
-	assert.Contains(ctx.ReleaseNotes, "added feature 1")
-	assert.Contains(ctx.ReleaseNotes, "fixed bug 2")
-}
-
-func TestChangelogOfFirstRelease(t *testing.T) {
-	var assert = assert.New(t)
-	_, back := testlib.Mktmp(t)
-	defer back()
-	testlib.GitInit(t)
-	var msgs = []string{
-		"initial commit",
-		"another one",
-		"one more",
-		"and finally this one",
-	}
-	for _, msg := range msgs {
-		testlib.GitCommit(t, msg)
-	}
-	testlib.GitTag(t, "v0.0.1")
-	var ctx = &context.Context{
-		Config: config.Project{},
-	}
-	testlib.AssertSkipped(t, Pipe{}.Run(ctx))
-	assert.Equal("v0.0.1", ctx.Git.CurrentTag)
-	assert.Contains(ctx.ReleaseNotes, "## Changelog")
-	for _, msg := range msgs {
-		assert.Contains(ctx.ReleaseNotes, msg)
-	}
-}
-
-func TestCustomReleaseNotes(t *testing.T) {
-	var assert = assert.New(t)
-	_, back := testlib.Mktmp(t)
-	defer back()
-	testlib.GitInit(t)
-	testlib.GitCommit(t, "first")
-	testlib.GitTag(t, "v0.0.1")
-	var ctx = &context.Context{
-		Config:       config.Project{},
-		ReleaseNotes: "custom",
-	}
-	testlib.AssertSkipped(t, Pipe{}.Run(ctx))
-	assert.Equal("v0.0.1", ctx.Git.CurrentTag)
-	assert.Equal(ctx.ReleaseNotes, "custom")
+	assert.NoError(t, Pipe{}.Run(ctx))
 }

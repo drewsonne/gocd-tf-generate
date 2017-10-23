@@ -1,0 +1,25 @@
+version: '3'
+services:
+  gocd-server:
+    build:
+      context: ./server/
+    ports:
+     - "8153:8153"
+     - "8154:8154"
+    volumes:
+     - ./godata/server:/godata
+    environment:
+      AGENT_AUTO_REGISTER_KEY: cli-testing
+  gocd-agent:
+    build:
+      context: ./agent/
+    links:
+     - gocd-server:server
+    volumes:
+     - ./godata/agent:/godata
+    depends_on:
+     - gocd-server
+    environment:
+     AGENT_AUTO_REGISTER_KEY: c66f081b-4014-4dfc-b766-1e10392e5004
+#     AGENT_AUTO_REGISTER_HOSTNAME: https://server:8154/go
+     GO_SERVER_URL: https://server:8154/go

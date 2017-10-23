@@ -106,7 +106,7 @@ type TaskAttributes struct {
 	Stage               string                      `json:"stage,omitempty"`
 	Job                 string                      `json:"job,omitempty"`
 	Source              string                      `json:"source,omitempty"`
-	IsSourceAFile       string                      `json:"is_source_a_file,omitempty"`
+	IsSourceAFile       bool                        `json:"is_source_a_file,omitempty"`
 	Destination         string                      `json:"destination,omitempty"`
 	PluginConfiguration *TaskPluginConfiguration    `json:"plugin_configuration,omitempty"`
 	Configuration       []PluginConfigurationKVPair `json:"configuration,omitempty"`

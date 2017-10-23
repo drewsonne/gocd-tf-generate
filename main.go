@@ -11,19 +11,20 @@ import (
 )
 
 func main() {
-	var id, resource, output string
+	var id, resource, output, profile string
 	var outputToFile, debug bool
 	flag.StringVar(&resource, "resource", "",
 		"Name of the resource to generate tf config for. Use '*' for all resources. Default: * ."+
 			"Allowed Values: (pipeline_template)")
 	flag.StringVar(&id, "id", "*",
 		"Specify the ID of the resource to generate a specific resource. Omit this to generate all.")
+	flag.StringVar(&profile, "profile", "default", "Specify the gocd profile to use.")
 	flag.BoolVar(&outputToFile, "to-file", false, "If supplied, output to file.")
 	flag.BoolVar(&debug, "debug", false, "Print debug logging")
 	flag.Parse()
 
-	cfg, err := gocd.LoadConfig()
-	if err != nil {
+	cfg := gocd.Configuration{}
+	if err := gocd.LoadConfigByName(profile, &cfg); err != nil {
 		panic(err)
 	}
 	c := cfg.Client()

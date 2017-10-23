@@ -7,70 +7,111 @@ import (
 	"github.com/urfave/cli"
 )
 
-// NewCliClient
-func cliAgent(c *cli.Context) *gocd.Client {
-	var cfg *gocd.Configuration
-	var err error
-	if cfg, err = gocd.LoadConfig(); err != nil {
-		panic(err)
+// GetCliCommands returns a list of all CLI Command structs
+func GetCliCommands() []cli.Command {
+	return []cli.Command{
+		*configureCommand(),
+		*listAgentsCommand(),
+		*listPipelineTemplatesCommand(),
+		*getAgentCommand(),
+		*getPipelineTemplateCommand(),
+		*createPipelineTemplateCommand(),
+		*updateAgentCommand(),
+		*updateAgentsCommand(),
+		*updatePipelineConfigCommand(),
+		*updatePipelineTemplateCommand(),
+		*deleteAgentCommand(),
+		*deleteAgentsCommand(),
+		*deletePipelineTemplateCommand(),
+		*deletePipelineConfigCommand(),
+		*listPipelineGroupsCommand(),
+		*getPipelineHistoryCommand(),
+		*getPipelineCommand(),
+		*createPipelineConfigCommand(),
+		*generateJSONSchemaCommand(),
+		*getPipelineStatusCommand(),
+		*pausePipelineCommand(),
+		*unpausePipelineCommand(),
+		*releasePipelineLockCommand(),
+		*getConfigurationCommand(),
+		*encryptCommand(),
+		*getVersionCommand(),
+		*listPluginsCommand(),
+		*getPluginCommand(),
+		*listScheduledJobsCommand(),
+		*getPipelineConfigCommand(),
+		*listEnvironmentsCommand(),
+		*getEnvironmentCommand(),
+		*addPipelinesToEnvironmentCommand(),
+		*removePipelinesFromEnvironmentCommand(),
+		*listPropertiesCommand(),
+		*createPropertyCommand(),
 	}
-
-	if server := c.String("server"); server != "" {
-		cfg.Server = server
-	}
-
-	if username := c.String("username"); username != "" {
-		cfg.Username = username
-	}
-
-	if password := c.String("password"); password != "" {
-		cfg.Password = password
-	}
-
-	cfg.SslCheck = cfg.SslCheck || c.Bool("ssl_check")
-
-	return cfg.Client()
 }
 
-func handeErrOutput(reqType string, err error) error {
-	return handleOutput(nil, nil, reqType, err)
-}
+// NewCliClient creates a new gocd client for use by cli actions.
+func NewCliClient(c *cli.Context) (*gocd.Client, error) {
+	var profile string
 
-func handleOutput(r interface{}, hr *gocd.APIResponse, reqType string, err error) error {
-	var b []byte
-	var o map[string]interface{}
-	if err != nil {
-		o = map[string]interface{}{
-			"Error": err.Error(),
-		}
-	} else if hr.HTTP.StatusCode >= 200 && hr.HTTP.StatusCode < 300 {
-		o = map[string]interface{}{
-			fmt.Sprintf("%sResponse", reqType): r,
-		}
-		//} else if hr.HTTP.StatusCode == 404 {
-		//	o = map[string]interface{}{
-		//		"Error": fmt.Sprintf("Could not find resource for '%s' action.", reqType),
-		//	}
-	} else {
+	if profile = c.String("profile"); profile == "" {
+		profile = "default"
+	}
 
-		b1, _ := json.Marshal(hr.HTTP.Header)
-		b2, _ := json.Marshal(hr.Request.HTTP.Header)
-		o = map[string]interface{}{
-			"Error":           "An error occurred while retrieving the resource.",
-			"Status":          hr.HTTP.StatusCode,
-			"ResponseHeader":  string(b1),
-			"ResponseBody":    hr.Body,
-			"RequestBody":     hr.Request.Body,
-			"RequestEndpoint": hr.Request.HTTP.URL.String(),
-			"RequestHeader":   string(b2),
+	cfg := &gocd.Configuration{}
+	cfgErr := gocd.LoadConfigByName(profile, cfg)
+
+	setStringFromContext(&cfg.Server, "server", c)
+
+	if cfg.Server == "" {
+		if cfgErr != nil {
+			return nil, cfgErr
+		} else {
+			// If we didn't have any errors, and our server is empty, use the local.
+			cfg.Server = "https://127.0.0.1:8154/go/"
 		}
 	}
-	b, err = json.MarshalIndent(o, "", "    ")
+
+	setStringFromContext(&cfg.Username, "username", c)
+	setStringFromContext(&cfg.Password, "password", c)
+
+	cfg.SkipSslCheck = cfg.SkipSslCheck || c.Bool("skip_ssl_check")
+
+	return cfg.Client(), nil
+}
+
+func setStringFromContext(dest *string, key string, c *cli.Context) {
+	var value string
+	if value = c.String(key); value != "" {
+		*dest = value
+	}
+}
+
+func handleOutput(r interface{}, reqType string) cli.ExitCoder {
+	o := map[string]interface{}{
+		fmt.Sprintf("%s-response", reqType): r,
+	}
+	b, err := json.MarshalIndent(o, "", "    ")
 	if err != nil {
 		panic(err)
 	}
 
 	fmt.Println(string(b))
-
 	return nil
+}
+
+type ActionWrapperFunc func(client *gocd.Client, c *cli.Context) (interface{}, *gocd.APIResponse, error)
+
+func ActionWrapper(callback ActionWrapperFunc) interface{} {
+	return func(c *cli.Context) error {
+		cl := c.App.Metadata["c"].(func(c *cli.Context) (*gocd.Client, error))
+		client, err := cl(c.Parent())
+		if err != nil {
+			return NewCliError(c.Command.Name, nil, err)
+		}
+		v, resp, err := callback(client, c)
+		if err != nil {
+			return NewCliError(c.Command.Name, resp, err)
+		}
+		return handleOutput(v, c.Command.Name)
+	}
 }

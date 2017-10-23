@@ -1,4 +1,4 @@
-# GoCD SDK 0.3.13
+# GoCD SDK 0.6.4
 
 [![GoDoc](https://godoc.org/github.com/drewsonne/go-gocd/gocd?status.svg)](https://godoc.org/github.com/drewsonne/go-gocd/gocd)
 [![Build Status](https://travis-ci.org/drewsonne/go-gocd.svg?branch=master)](https://travis-ci.org/drewsonne/go-gocd)
@@ -15,8 +15,10 @@ CLI tool to interace with GoCD Server.
 
 ##### Homebrew
 
-    $ brew tap drewsonne/tap
-    $ brew install go-gocd
+``` bash
+brew tap drewsonne/tap
+brew install go-gocd
+```
 
 ##### Manual
 Download the latest release from [https://github.com/drewsonne/go-gocd/releases](https://github.com/drewsonne/go-gocd/releases),
@@ -24,35 +26,48 @@ and place the binary in your `$PATH`.
 
 #### Quickstart
 
-    $ gocd configure
-    $ gocd list-agents
+```
+$ gocd configure
+? GoCD Server (should contain '/go/' suffix) https://my-go-server:8154/go/
+? Client Username my_user
+? Client Password *****
+? Skip SSL certificate validation (y/N) N
+$ gocd list-agents
+```
 
 #### Configuration
 The library can either be configured using environment variables, cli flags, or a yaml config file.
 
-##### Environment Variables
-
- - `$GOCD_SERVER`
- - `$GOCD_USERNAME`
- - `$GOCD_PASSWORD`
- - `$GOCD_SSL_CHECK`
- 
-##### CLI Flags
-
- - `--server`
- - `--username`
- - `--password`
- - `--ssl_check`
+| Name | CLI Flag | YAML | Environment Variable |
+|------|----------|------|----------------------|
+| GoCD Server (with `/go/` suffix) | `--server` | `server` | `$GOCD_SERVER` |
+| Username | `--username` | `username` | `$GOCD_USERNAME` |
+| Password | `--password` | `password` | `$GOCD_PASSWORD` |
+| Skip HTTPS/SSL Certification Check | `--skip_ssl_check` | `skip_ssl_check` | `$GOCD_SKIP_SSL_CHECK` |
  
 ##### YAML Config File
 
 Run `gocd configure` to launch a wizard which will create a file at `~/.gocd.conf`, or create the file manually:
 
 ```yaml
-server: https://goserver:8154/go
-username: admin
-password: mypassword
-ssl_check: false
+default:
+  server: https://goserver:8154/go
+  username: admin
+  password: mypassword
+  skip_ssl_check: true
+```
+
+##### Configuration Profiles
+Authentication credentials for multiple gocd servers can be stored by using the `--profile` flag.
+Configuration Profiles can be created using:
+```bash
+gocd --profile other-server configure
+```
+Which will create a new configuration block in `~/.beamly.conf`
+
+Configuration profiles can be used by specifying `--profile` before your command
+```bash
+gocd --profile other-server list-agents
 ```
 
 #### Help
@@ -63,11 +78,6 @@ ssl_check: false
 
 ### Usage
 
-```go
-package main
-import "github.com/drewsonne/go-gocd/gocd"
-```
-
 Construct a new GoCD client and supply the URL to your GoCD server and if required, username and password. Then use the
 various services on the client to access different parts of the GoCD API.
 For example:
@@ -77,6 +87,7 @@ package main
 import (
     "github.com/drewsonne/go-gocd/gocd"
     "context"
+    "fmt"
 )
 
 func main() {
@@ -86,16 +97,43 @@ func main() {
         Password: "MySecretPassword",
     }
     
-    client := gocd.NewClient(&cfg,nil)
-    
-    // list all agents in use by the GoCD Server
-    agents, _, err := client.Agents.List(context.Background())
+    c := cfg.Client()
 
-    ...
+    // list all agents in use by the GoCD Server
+    var a []*gocd.Agent
+    var err error
+    var r *gocd.APIResponse
+    if a, r, err = c.Agents.List(context.Background()); err != nil {
+        if r.HTTP.StatusCode == 404 {
+            fmt.Println("Couldn't find agent")
+        } else {
+        	panic(err)
+        }
+    }
+    
+    fmt.Println(a)
 }
 ```
 
-### Usage
+If you wish to use your own http client, you can use the following idiom
+
+```go
+package main
+
+import (
+    "github.com/drewsonne/go-gocd/gocd"
+	"net/http"
+    "context"
+)
+
+func main() {
+    client := gocd.NewClient(
+        &gocd.Configuration{},
+        &http.Client{},
+    )
+    client.Login(context.Background())
+}
+```
 
 ## Roadmap ##
 This library is still in pre-release. It was initially developed to be an interface for a [gocd terraform provider](https://github.com/drewsonne/terraform-provider-gocd),

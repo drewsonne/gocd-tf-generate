@@ -133,6 +133,7 @@ func testPipelineServiceCreate(t *testing.T) {
 				},
 			},
 		},
+		Version: "mock-version",
 	}
 	pr, _, err := client.PipelineConfigs.Create(context.Background(), "first", &p)
 	if err != nil {

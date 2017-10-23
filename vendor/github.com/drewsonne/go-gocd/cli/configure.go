@@ -10,32 +10,68 @@ import (
 
 // List of command name and descriptions
 const (
-	ConfigureCommandName  = "configure"
-	ConfigureCommandUsage = "Generate configuration file ~/.gocd.conf"
+	configureCommandName  = "configure"
+	configureCommandUsage = "Generate configuration file ~/.gocd.conf"
 )
 
-func configureAction(c *cli.Context) error {
-	var s string
-	var err error
-	if s, err = generateConfigFile(); err != nil {
-		return err
+type generateConfigFunc func() (cfg *gocd.Configuration, err error)
+type loadConfigFunc func() (cfgs map[string]*gocd.Configuration, err error)
+type writeConfigFunc func(b []byte) (err error)
+
+type configActionRunner struct {
+	context *cli.Context
+
+	generateConfig generateConfigFunc
+	loadConfigs    loadConfigFunc
+	writeConfigs   writeConfigFunc
+}
+
+func (car configActionRunner) run() (err error) {
+	var cfg *gocd.Configuration
+	var profile string
+	var b []byte
+
+	if profile = car.context.Parent().String("profile"); profile == "" {
+		profile = "default"
 	}
 
-	if err = ioutil.WriteFile(gocd.ConfigFilePath(),
-		[]byte(s), 0644); err != nil {
-		return err
+	cfgs, err := car.loadConfigs()
+	if err != nil {
+		return NewCliError("Configure:generate", nil, err)
 	}
+
+	if cfg, err = car.generateConfig(); err != nil {
+		return NewCliError("Configure:generate", nil, err)
+	}
+
+	cfgs[profile] = cfg
+
+	if b, err = yaml.Marshal(cfgs); err != nil {
+		return NewCliError("Configure:yaml", nil, err)
+	}
+
+	car.writeConfigs(b)
 
 	return nil
 }
 
-// Build a default template
-func generateConfigFile() (string, error) {
-	cfg := gocd.Configuration{}
+func writeConfigsToFile(b []byte) (err error) {
+	path, err := gocd.ConfigFilePath()
+	if err != nil {
+		return err
+	}
+	if err = ioutil.WriteFile(path, b, 0644); err != nil {
+		return NewCliError("Configure:write", nil, err)
+	}
+	return nil
+}
 
+// Build a default template
+func generateConfig() (cfg *gocd.Configuration, err error) {
+	cfg = &gocd.Configuration{}
 	qs := []*survey.Question{
 		{
-			Name:     "gocd_server",
+			Name:     "server",
 			Prompt:   &survey.Input{Message: "GoCD Server (should contain '/go/' suffix)"},
 			Validate: survey.Required,
 		},
@@ -48,38 +84,31 @@ func generateConfigFile() (string, error) {
 			Prompt: &survey.Password{Message: "Client Password"},
 		},
 		{
-			Name:   "ssl_check",
-			Prompt: &survey.Confirm{Message: "Validate SSL Certiicate?"},
+			Name:   "skip_ssl_check",
+			Prompt: &survey.Confirm{Message: "Skip SSL certificate validation"},
 		},
 	}
 
-	a := struct {
-		GoCDServer string `survey:"gocd_server"`
-		Username   string
-		Password   string
-		SslCheck   bool `survey:"ssl_check"`
-	}{}
-
-	survey.Ask(qs, &a)
-
-	cfg.Server = a.GoCDServer
-	cfg.Username = a.Username
-	cfg.Password = a.Password
-	cfg.SslCheck = a.SslCheck
-
-	s, err := yaml.Marshal(cfg)
-	if err != nil {
-		return "", err
-	}
-
-	return string(s), nil
+	err = survey.Ask(qs, cfg)
+	return
 }
 
 // ConfigureCommand handles the interaction between the cli flags and the action handler for configure
-func ConfigureCommand() *cli.Command {
+func configureCommand() *cli.Command {
 	return &cli.Command{
-		Name:   ConfigureCommandName,
-		Usage:  ConfigureCommandUsage,
-		Action: configureAction,
+		Name:  configureCommandName,
+		Usage: configureCommandUsage,
+		Action: func(c *cli.Context) (err error) {
+			return configActionRunner{
+				context: c,
+
+				generateConfig: generateConfig,
+				loadConfigs:    gocd.LoadConfigFromFile,
+				writeConfigs:   writeConfigsToFile,
+			}.run()
+		},
+		Flags: []cli.Flag{
+			cli.StringFlag{Name: "profile"},
+		},
 	}
 }

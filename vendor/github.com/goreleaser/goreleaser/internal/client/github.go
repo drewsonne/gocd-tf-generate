@@ -2,11 +2,13 @@ package client
 
 import (
 	"bytes"
+	"net/url"
 	"os"
 
 	"github.com/apex/log"
 	"github.com/google/go-github/github"
 	"github.com/goreleaser/goreleaser/context"
+	"github.com/goreleaser/goreleaser/internal/name"
 	"golang.org/x/oauth2"
 )
 
@@ -15,13 +17,25 @@ type githubClient struct {
 }
 
 // NewGitHub returns a github client implementation
-func NewGitHub(ctx *context.Context) Client {
+func NewGitHub(ctx *context.Context) (Client, error) {
 	ts := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: ctx.Token},
 	)
-	return &githubClient{
-		client: github.NewClient(oauth2.NewClient(ctx, ts)),
+	client := github.NewClient(oauth2.NewClient(ctx, ts))
+	if ctx.Config.GitHubURLs.API != "" {
+		api, err := url.Parse(ctx.Config.GitHubURLs.API)
+		if err != nil {
+			return &githubClient{}, err
+		}
+		upload, err := url.Parse(ctx.Config.GitHubURLs.Upload)
+		if err != nil {
+			return &githubClient{}, err
+		}
+		client.BaseURL = api
+		client.UploadURL = upload
 	}
+
+	return &githubClient{client}, nil
 }
 
 func (c *githubClient) CreateFile(
@@ -31,8 +45,8 @@ func (c *githubClient) CreateFile(
 ) (err error) {
 	options := &github.RepositoryContentFileOptions{
 		Committer: &github.CommitAuthor{
-			Name:  github.String("goreleaserbot"),
-			Email: github.String("goreleaser@carlosbecker.com"),
+			Name:  github.String(ctx.Config.Brew.CommitAuthor.Name),
+			Email: github.String(ctx.Config.Brew.CommitAuthor.Email),
 		},
 		Content: content.Bytes(),
 		Message: github.String(
@@ -70,11 +84,16 @@ func (c *githubClient) CreateFile(
 
 func (c *githubClient) CreateRelease(ctx *context.Context, body string) (releaseID int, err error) {
 	var release *github.RepositoryRelease
+	releaseTitle, err := name.ForTitle(ctx)
+	if err != nil {
+		return 0, err
+	}
 	var data = &github.RepositoryRelease{
-		Name:    github.String(ctx.Git.CurrentTag),
-		TagName: github.String(ctx.Git.CurrentTag),
-		Body:    github.String(body),
-		Draft:   github.Bool(ctx.Config.Release.Draft),
+		Name:       github.String(releaseTitle),
+		TagName:    github.String(ctx.Git.CurrentTag),
+		Body:       github.String(body),
+		Draft:      github.Bool(ctx.Config.Release.Draft),
+		Prerelease: github.Bool(ctx.Config.Release.Prerelease),
 	}
 	release, _, err = c.client.Repositories.GetReleaseByTag(
 		ctx,

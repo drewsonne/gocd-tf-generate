@@ -18,6 +18,22 @@ func TestGenericActions(t *testing.T) {
 	t.Run("Post", funcTestGenericPost)
 	t.Run("HTTPFail", funcTestActionsHTTPFail)
 	t.Run("DefaultAcceptHeader", testGenericActionDefaultAcceptHeader)
+	t.Run("VersionAction", testVersionAction)
+}
+
+type mockVersioned struct{}
+
+func (mockVersioned) SetVersion(version string) {}
+func (mockVersioned) GetVersion() string {
+	return ""
+}
+
+func testVersionAction(t *testing.T) {
+	funcRan := false
+	versionAction(mockVersioned{}, func(ver Versioned) {
+		funcRan = true
+	})
+	assert.True(t, funcRan)
 }
 
 func testGenericActionDefaultAcceptHeader(t *testing.T) {

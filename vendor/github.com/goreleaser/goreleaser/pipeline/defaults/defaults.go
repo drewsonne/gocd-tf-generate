@@ -14,6 +14,9 @@ import (
 // NameTemplate default name_template for the archive.
 const NameTemplate = "{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
 
+// ReleaseNameTemplate is the default name for the release.
+const ReleaseNameTemplate = "{{.Tag}}"
+
 // SnapshotNameTemplate represents the default format for snapshot release names.
 const SnapshotNameTemplate = "SNAPSHOT-{{ .Commit }}"
 
@@ -29,8 +32,11 @@ func (Pipe) Description() string {
 }
 
 // Run the pipe
-func (Pipe) Run(ctx *context.Context) error {
+func (Pipe) Run(ctx *context.Context) error { // nolint: gocyclo
 	ctx.Config.Dist = "dist"
+	if ctx.Config.Release.NameTemplate == "" {
+		ctx.Config.Release.NameTemplate = ReleaseNameTemplate
+	}
 	if ctx.Config.Snapshot.NameTemplate == "" {
 		ctx.Config.Snapshot.NameTemplate = SnapshotNameTemplate
 	}
@@ -43,7 +49,9 @@ func (Pipe) Run(ctx *context.Context) error {
 	if ctx.Config.ProjectName == "" {
 		ctx.Config.ProjectName = ctx.Config.Release.GitHub.Name
 	}
+
 	setBuildDefaults(ctx)
+
 	if ctx.Config.Brew.Install == "" {
 		var installs []string
 		for _, build := range ctx.Config.Builds {
@@ -57,9 +65,36 @@ func (Pipe) Run(ctx *context.Context) error {
 		}
 		ctx.Config.Brew.Install = strings.Join(installs, "\n")
 	}
+
+	if ctx.Config.Brew.CommitAuthor.Name == "" {
+		ctx.Config.Brew.CommitAuthor.Name = "goreleaserbot"
+	}
+	if ctx.Config.Brew.CommitAuthor.Email == "" {
+		ctx.Config.Brew.CommitAuthor.Email = "goreleaser@carlosbecker.com"
+	}
+
 	err := setArchiveDefaults(ctx)
+	setDockerDefaults(ctx)
 	log.WithField("config", ctx.Config).Debug("defaults set")
 	return err
+}
+
+func setDockerDefaults(ctx *context.Context) {
+	if len(ctx.Config.Dockers) != 1 {
+		return
+	}
+	if ctx.Config.Dockers[0].Goos == "" {
+		ctx.Config.Dockers[0].Goos = "linux"
+	}
+	if ctx.Config.Dockers[0].Goarch == "" {
+		ctx.Config.Dockers[0].Goarch = "amd64"
+	}
+	if ctx.Config.Dockers[0].Binary == "" {
+		ctx.Config.Dockers[0].Binary = ctx.Config.Builds[0].Binary
+	}
+	if ctx.Config.Dockers[0].Dockerfile == "" {
+		ctx.Config.Dockers[0].Dockerfile = "Dockerfile"
+	}
 }
 
 func isBrewBuild(build config.Build) bool {
@@ -86,7 +121,7 @@ func setReleaseDefaults(ctx *context.Context) error {
 	}
 	repo, err := remoteRepo()
 	if err != nil {
-		return fmt.Errorf("failed reading repo from git: %v", err.Error())
+		return err
 	}
 	ctx.Config.Release.GitHub = repo
 	return nil

@@ -1,0 +1,99 @@
+{
+  "name": "go-gocd",
+  "materials": [
+    {
+      "type": "git",
+      "attributes": {
+        "url": "https://github.com/drewsonne/go-gocd",
+        "destination": "src/github.com/drewsonne/go-gocd"
+      }
+    }
+  ],
+  "stages": [
+    {
+      "name": "test",
+      "fetch_materials": true,
+      "environment_variables": [
+        {
+          "name": "GOPATH",
+          "value": "/godata/pipelines/go-gocd/"
+        }
+      ],
+      "jobs": [
+        {
+          "name": "test",
+          "tasks": [
+            {
+              "type": "exec",
+              "attributes": {
+                "command": "gocd",
+                "arguments": [
+                  "create-property",
+                  "--name",
+                  "test-key",
+                  "--value",
+                  "test-value"
+                ]
+              }
+            },
+            {
+              "type": "exec",
+              "attributes": {
+                "command": "make",
+                "arguments": [
+                  "test"
+                ],
+                "working_directory": "src/github.com/drewsonne/go-gocd"
+              }
+            },
+            {
+              "type": "exec",
+              "attributes": {
+                "command": "ls",
+                "arguments": [
+                  "-lah"
+                ],
+                "working_directory": "src/github.com/drewsonne/go-gocd"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "build",
+      "fetch_materials": true,
+      "environment_variables": [
+        {
+          "name": "GOPATH",
+          "value": "/godata/pipelines/go-gocd/"
+        }
+      ],
+      "jobs": [
+        {
+          "name": "compile",
+          "artifacts": [
+            {
+              "type": "build",
+              "source": "gocd"
+            }
+          ],
+          "tasks": [
+            {
+              "type": "exec",
+              "attributes": {
+                "command": "go",
+                "arguments": [
+                  "build",
+                  "-o",
+                  "../../../../gocd"
+                ],
+                "working_directory": "src/github.com/drewsonne/go-gocd"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

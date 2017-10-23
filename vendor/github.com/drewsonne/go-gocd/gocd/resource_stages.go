@@ -5,16 +5,6 @@ import (
 	"errors"
 )
 
-// StageContainer describes structs which contain stages, eg Pipelines and PipelineTemplates
-type StageContainer interface {
-	GetName() string
-	SetStage(stage *Stage)
-	GetStage(string) *Stage
-	SetStages(stages []*Stage)
-	GetStages() []*Stage
-	AddStage(stage *Stage)
-}
-
 // JSONString returns a string of this stage as a JSON object.
 func (s *Stage) JSONString() (string, error) {
 	err := s.Validate()

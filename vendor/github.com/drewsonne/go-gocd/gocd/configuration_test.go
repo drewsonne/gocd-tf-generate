@@ -50,8 +50,8 @@ func testConfigurationGetVersion(t *testing.T) {
 		t.Error(err)
 	}
 
-	assert.Equal(t, "https://build.go.cd/go/api/version", v.Links.Self.String())
-	assert.Equal(t, "https://api.gocd.org/#version", v.Links.Doc.String())
+	assert.Equal(t, "https://build.go.cd/go/api/version", v.Links.Get("Self").URL.String())
+	assert.Equal(t, "https://api.gocd.org/#version", v.Links.Get("Doc").URL.String())
 	assert.Equal(t, "16.6.0", v.Version)
 	assert.Equal(t, "3348", v.BuildNumber)
 	assert.Equal(t, "a7a5717cbd60c30006314fb8dd529796c93adaf0", v.GitSHA)

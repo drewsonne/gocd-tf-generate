@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 
 set -e
-echo "" > coverage.txt
+echo "mode: atomic" > coverage.out
 
-for d in $(go list ./... | grep -v vendor | grep -v gocd-response-links); do
-    go test -v -race -coverprofile=profile.out -covermode=atomic $d
-    if [ -f profile.out ]; then
-        cat profile.out >> coverage.txt
-        rm profile.out
+for d in $(glide novendor); do
+    go test -v -coverprofile=profile.txt -covermode=atomic $d
+    if [ -f profile.txt ]; then
+        cat profile.txt | tail -n +2 >> coverage.out
+        rm profile.txt
     fi
 done
