@@ -13,9 +13,11 @@ import (
 	"github.com/goreleaser/goreleaser/pipeline/archive"
 	"github.com/goreleaser/goreleaser/pipeline/brew"
 	"github.com/goreleaser/goreleaser/pipeline/build"
+	"github.com/goreleaser/goreleaser/pipeline/changelog"
 	"github.com/goreleaser/goreleaser/pipeline/checksums"
 	"github.com/goreleaser/goreleaser/pipeline/cleandist"
 	"github.com/goreleaser/goreleaser/pipeline/defaults"
+	"github.com/goreleaser/goreleaser/pipeline/docker"
 	"github.com/goreleaser/goreleaser/pipeline/env"
 	"github.com/goreleaser/goreleaser/pipeline/fpm"
 	"github.com/goreleaser/goreleaser/pipeline/git"
@@ -27,6 +29,7 @@ import (
 var pipes = []pipeline.Pipe{
 	defaults.Pipe{},  // load default configs
 	git.Pipe{},       // get and validate git repo state
+	changelog.Pipe{}, // builds the release changelog
 	env.Pipe{},       // load and validate environment variables
 	cleandist.Pipe{}, // ensure ./dist is clean
 	build.Pipe{},     // build
@@ -34,6 +37,7 @@ var pipes = []pipeline.Pipe{
 	fpm.Pipe{},       // archive via fpm (deb, rpm, etc)
 	snapcraft.Pipe{}, // archive via snapcraft (snap)
 	checksums.Pipe{}, // checksums of the files
+	docker.Pipe{},    // create and push docker images
 	release.Pipe{},   // release to github
 	brew.Pipe{},      // push to brew tap
 }
@@ -73,7 +77,8 @@ func Release(flags Flags) error {
 		if err != nil {
 			return err
 		}
-		log.WithField("notes", notes).Info("loaded custom release notes")
+		log.WithField("file", notes).Info("loaded custom release notes")
+		log.WithField("file", notes).Debugf("custon release notes: \n%s", string(bts))
 		ctx.ReleaseNotes = string(bts)
 	}
 	ctx.Snapshot = flags.Bool("snapshot")
@@ -96,9 +101,8 @@ func handle(err error) error {
 	if err == nil {
 		return nil
 	}
-	skip, ok := err.(pipeline.ErrSkip)
-	if ok {
-		log.WithField("reason", skip.Error()).Warn("skipped")
+	if pipeline.IsSkip(err) {
+		log.WithField("reason", err.Error()).Warn("skipped")
 		return nil
 	}
 	return err

@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"github.com/drewsonne/go-gocd/gocd"
 	"github.com/urfave/cli"
 )
 
@@ -14,32 +15,27 @@ const (
 )
 
 // GetPluginAction retrieves a single plugin by name
-func GetPluginAction(c *cli.Context) error {
-	pgs, r, err := cliAgent(c).Plugins.Get(context.Background(), c.String("name"))
-	if err != nil {
-		return handleOutput(nil, r, "GetPlugin", err)
+func getPluginAction(client *gocd.Client, c *cli.Context) (r interface{}, resp *gocd.APIResponse, err error) {
+	name := c.String("name")
+	if name == "" {
+		return nil, nil, NewFlagError("name")
 	}
 
-	return handleOutput(pgs, r, "ListPipelineTemplates", err)
+	return client.Plugins.Get(context.Background(), c.String("name"))
 }
 
 // ListPluginsAction retrieves all plugin configurations
-func ListPluginsAction(c *cli.Context) error {
-	pgs, r, err := cliAgent(c).Plugins.List(context.Background())
-	if err != nil {
-		return handleOutput(nil, r, "ListPlugins", err)
-	}
-
-	return handleOutput(pgs, r, "ListPlugins", err)
+func listPluginsAction(client *gocd.Client, c *cli.Context) (r interface{}, resp *gocd.APIResponse, err error) {
+	return client.Plugins.List(context.Background())
 }
 
 // GetPluginCommand Describes the cli interface for the GetPluginAction
-func GetPluginCommand() *cli.Command {
+func getPluginCommand() *cli.Command {
 	return &cli.Command{
 		Name:     GetPluginCommandName,
 		Usage:    GetPluginCommandUsage,
 		Category: "Plugins",
-		Action:   GetPluginAction,
+		Action:   ActionWrapper(getPluginAction),
 		Flags: []cli.Flag{
 			cli.StringFlag{Name: "name"},
 		},
@@ -47,11 +43,11 @@ func GetPluginCommand() *cli.Command {
 }
 
 // ListPluginsCommand Describes the cli interface for the ListPluginsCommand
-func ListPluginsCommand() *cli.Command {
+func listPluginsCommand() *cli.Command {
 	return &cli.Command{
 		Name:     ListPluginsCommandName,
 		Usage:    ListPluginsCommandUsage,
 		Category: "Plugins",
-		Action:   ListPluginsAction,
+		Action:   ActionWrapper(listPluginsAction),
 	}
 }

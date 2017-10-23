@@ -2,7 +2,6 @@ package gocd
 
 import (
 	"context"
-	"net/url"
 )
 
 // ConfigurationService describes the HAL _link resource for the api response object for a pipelineconfig
@@ -204,21 +203,14 @@ type ConfigProperty struct {
 	Value string `xml:"value"`
 }
 
-// VersionLinks describes the HAL _link resource for the api response object for a collection of agent objects.
-//go:generate gocd-response-links-generator -type=VersionLinks
-type VersionLinks struct {
-	Self *url.URL `json:"self"`
-	Doc  *url.URL `json:"doc"`
-}
-
 // Version part of cruise-control.xml. @TODO better documentation
 type Version struct {
-	Links       VersionLinks `json:"_links"`
-	Version     string       `json:"version"`
-	BuildNumber string       `json:"build_number"`
-	GitSHA      string       `json:"git_sha"`
-	FullVersion string       `json:"full_version"`
-	CommitURL   string       `json:"commit_url"`
+	Links       *HALLinks `json:"_links"`
+	Version     string    `json:"version"`
+	BuildNumber string    `json:"build_number"`
+	GitSHA      string    `json:"git_sha"`
+	FullVersion string    `json:"full_version"`
+	CommitURL   string    `json:"commit_url"`
 }
 
 // Get will retrieve all agents, their status, and metadata from the GoCD Server.

@@ -63,3 +63,4 @@ Temporary Items
 /gocd-cli-action-generator/gocd-cli-action-generator
 *.out
 /vendor/**/*_test.go
+/docker/godata

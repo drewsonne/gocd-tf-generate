@@ -36,6 +36,12 @@ const (
 const (
 	responseTypeXML  = "xml"
 	responseTypeJSON = "json"
+	responseTypeText = "text"
+)
+
+//Logging Environment variables
+const (
+	gocdLogLevel = "GOCD_LOG"
 )
 
 // StringResponse handles the unmarshaling of the single string response from DELETE requests.
@@ -79,6 +85,7 @@ type Client struct {
 	Encryption        *EncryptionService
 	Plugins           *PluginsService
 	Environments      *EnvironmentsService
+	Properties        *PropertiesService
 
 	common service
 	cookie string
@@ -103,14 +110,6 @@ type Auth struct {
 	Password string
 }
 
-// Configuration object used to initialise a gocd lib client to interact with the GoCD server.
-type Configuration struct {
-	Server   string `yaml:"server"`
-	Username string `yaml:"username,omitempty"`
-	Password string `yaml:"password,omitempty"`
-	SslCheck bool   `yaml:"ssl_check,omitempty"`
-}
-
 // HasAuth checks whether or not we have the required Username/Password variables provided.
 func (c *Configuration) HasAuth() bool {
 	return (c.Username != "") && (c.Password != "")
@@ -129,9 +128,9 @@ func NewClient(cfg *Configuration, httpClient *http.Client) *Client {
 	}
 
 	if strings.HasPrefix(cfg.Server, "https") {
-		if !cfg.SslCheck {
+		if cfg.SkipSslCheck {
 			httpClient.Transport = &http.Transport{
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: !cfg.SslCheck},
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: cfg.SkipSslCheck},
 			}
 		}
 	}
@@ -160,6 +159,9 @@ func NewClient(cfg *Configuration, httpClient *http.Client) *Client {
 	c.Encryption = (*EncryptionService)(&c.common)
 	c.Plugins = (*PluginsService)(&c.common)
 	c.Environments = (*EnvironmentsService)(&c.common)
+	c.Properties = (*PropertiesService)(&c.common)
+
+	SetupLogging()
 
 	return c
 }
@@ -184,12 +186,21 @@ func (c *Client) NewRequest(method, urlStr string, body interface{}, apiVersion 
 		return request, errors.New("Mock Testing Error")
 	}
 
-	rel, err := url.Parse("api/" + urlStr)
+	// Some calls
+	if strings.HasPrefix(urlStr, "/") {
+		urlStr = urlStr[1:]
+	} else {
+		urlStr = "api/" + urlStr
+	}
+	rel, err := url.Parse(urlStr)
 	if err != nil {
 		return request, err
 	}
 
 	u := c.BaseURL.ResolveReference(rel)
+	if c.BaseURL.RawQuery != "" {
+		u.RawQuery = c.BaseURL.RawQuery
+	}
 
 	var buf io.ReadWriter
 	if body != nil {
@@ -238,42 +249,55 @@ func (c *Client) NewRequest(method, urlStr string, body interface{}, apiVersion 
 
 // Do takes an HTTP request and resposne the response from the GoCD API endpoint.
 func (c *Client) Do(ctx context.Context, req *APIRequest, v interface{}, responseType string) (*APIResponse, error) {
+	var err error
+	var resp *http.Response
 
 	req.HTTP = req.HTTP.WithContext(ctx)
 
-	response := &APIResponse{
-		Request: req,
-	}
-
-	resp, err := c.client.Do(req.HTTP)
-	if err != nil {
+	if resp, err = c.client.Do(req.HTTP); err != nil {
 		return nil, err
 	}
 
-	response.HTTP = resp
-	err = CheckResponse(response.HTTP)
-	if err != nil {
-		return response, err
+	r := &APIResponse{
+		Request: req,
+		HTTP:    resp,
 	}
 
 	if v != nil {
-		if w, ok := v.(io.Writer); ok {
-			io.Copy(w, resp.Body)
-		} else {
-			bdy, err := ioutil.ReadAll(resp.Body)
-			if responseType == responseTypeXML {
-				err = xml.Unmarshal(bdy, v)
-			} else {
-				err = json.Unmarshal(bdy, v)
-			}
-			response.Body = string(bdy)
-			if err == io.EOF {
-				err = nil // ignore EOF errors caused by empty response body
-			}
+		if r.Body, err = readDoResponseBody(v, &r.HTTP.Body, responseType); err != nil {
+			return nil, err
 		}
 	}
 
-	return response, err
+	if err = CheckResponse(r.HTTP); err != nil {
+		return r, err
+	}
+
+	return r, err
+}
+
+func readDoResponseBody(v interface{}, body *io.ReadCloser, responseType string) (string, error) {
+
+	if w, ok := v.(io.Writer); ok {
+		_, err := io.Copy(w, *body)
+		return "", err
+	}
+
+	bdy, err := ioutil.ReadAll(*body)
+	if responseType == responseTypeText {
+		strBody := string(bdy)
+		v = &strBody
+	} else if responseType == responseTypeXML {
+		err = xml.Unmarshal(bdy, v)
+	} else {
+		err = json.Unmarshal(bdy, v)
+	}
+	if err == io.EOF {
+		err = nil // ignore EOF errors caused by empty response body
+	} else if err != nil {
+		return "", nil
+	}
+	return string(bdy), nil
 }
 
 // CheckResponse asserts that the http response status code was 2xx.

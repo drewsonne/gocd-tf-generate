@@ -1,10 +1,13 @@
 language: go
 go:
-  - 1.7.x
   - 1.8.x
   - 1.9.x
-  - release
-  - tip
+#  - release
+#  - tip
+
+env:
+ - CODECLIMATE_API_HOST=https://codebeat.co/webhooks/code_coverage
+
 
 addons:
   apt:
@@ -12,21 +15,23 @@ addons:
     - rpm
 
 matrix:
-  allow_failures:
-    - go: release
-    - go: tip
+#  allow_failures:
+#    - go: release
+#    - go: tip
   fast_finish: true
 
 before_install:
   - make before_install
 
 script:
-  - go generate -x $(go list ./... | grep -v vendor/) && git diff --exit-code; code=$?; git checkout -- .; (exit	$code)
+  - go generate -x $(glide novendor) && git diff --exit-code; code=$?; git checkout -- .; (exit	$code)
   - make test
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
   - go get github.com/goreleaser/goreleaser
+  - npm install -g codeclimate-test-reporter
+  - codeclimate-test-reporter < coverage.out
 
 deploy:
   - provider: script

@@ -3,6 +3,7 @@ package gocd
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"io"
@@ -16,6 +17,16 @@ import (
 const (
 	mockAuthorization = "Basic bW9ja1VzZXJuYW1lOm1vY2tQYXNzd29yZA=="
 )
+
+type mockReadCloserFail struct {
+}
+
+func (m mockReadCloserFail) Read(p []byte) (n int, err error) {
+	return 0, errors.New("MockReadFail")
+}
+func (m mockReadCloserFail) Close() error {
+	return errors.New("MockCloseFail")
+}
 
 var (
 	// mux is the HTTP request multiplexer used with the test server.
@@ -55,23 +66,32 @@ func teardown() {
 }
 
 func TestClient(t *testing.T) {
+	setup()
+	defer teardown()
+
 	t.Run("NewHTTPS", testClientNewHTTPS)
+	t.Run("TestDo", testClientDo)
+	t.Run("New", testNewClient)
 }
 
 func testClientNewHTTPS(t *testing.T) {
 	c := NewClient(&Configuration{
-		Server:   "https://my-goserver:8154/go/",
-		SslCheck: false,
+		Server:       "https://my-goserver:8154/go/",
+		SkipSslCheck: true,
 	}, nil)
 	assert.NotNil(t, c)
 
 	transport := c.client.Transport.(*http.Transport)
 	assert.True(t, transport.TLSClientConfig.InsecureSkipVerify)
+
+	client.Lock()
+	client.Unlock()
 }
 
 func TestCheckResponse(t *testing.T) {
 	t.Run("ValidHTTP", testCheckResponseValid)
 	t.Run("FailHTTP", testCheckResponseInvalid)
+	t.Run("FailBodyRead", testCheckResponseFailBodyRead)
 	t.Run("NewRequestWithCookie", testNewRequestWithCookie)
 	t.Run("NewRequestFailBodyDecode", testNewRequestFailDecode)
 	t.Run("NewRequestFailBadMethod", testNewRequestFailBadMethod)
@@ -116,6 +136,18 @@ func testNewRequestFailDecode(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func testCheckResponseFailBodyRead(t *testing.T) {
+	rc := mockReadCloserFail{}
+	//ioutil.ReadAll(rc)
+
+	err := CheckResponse(&http.Response{
+		StatusCode: 199,
+		Status:     "Failed",
+		Body:       rc,
+	})
+	assert.EqualError(t, err, "MockReadFail")
+}
+
 func testCheckResponseInvalid(t *testing.T) {
 	var rc1, rc2 io.ReadCloser
 
@@ -152,7 +184,7 @@ func testAuth(t *testing.T, r *http.Request, want string) {
 	assert.Contains(t, r.Header["Authorization"], want)
 }
 
-func TestNewClient(t *testing.T) {
+func testNewClient(t *testing.T) {
 
 	c := NewClient(&Configuration{
 		Server:   server.URL,
@@ -179,9 +211,7 @@ func TestNewClient(t *testing.T) {
 	}
 }
 
-func TestDo(t *testing.T) {
-	setup()
-	defer teardown()
+func testClientDo(t *testing.T) {
 
 	type foo struct {
 		A string

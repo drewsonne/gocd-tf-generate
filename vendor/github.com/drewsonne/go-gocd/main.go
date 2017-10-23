@@ -20,52 +20,45 @@ const GoCDUtilityUsageInstructions = "CLI Tool to interact with GoCD server"
 var Version string
 
 func main() {
+	buildCli().Run(os.Args)
+}
+
+func buildCli() *cli.App {
 
 	app := cli.NewApp()
 	app.Name = GoCDUtilityName
 	app.Usage = GoCDUtilityUsageInstructions
 	app.Version = Version
 	app.EnableBashCompletion = true
-	app.Commands = []cli.Command{
-		*gocli.ConfigureCommand(),
-		*gocli.ListAgentsCommand(),
-		*gocli.ListPipelineTemplatesCommand(),
-		*gocli.GetAgentCommand(),
-		*gocli.GetPipelineTemplateCommand(),
-		*gocli.CreatePipelineTemplateCommand(),
-		*gocli.UpdateAgentCommand(),
-		*gocli.UpdateAgentsCommand(),
-		*gocli.UpdatePipelineConfigCommand(),
-		*gocli.UpdatePipelineTemplateCommand(),
-		*gocli.DeleteAgentCommand(),
-		*gocli.DeleteAgentsCommand(),
-		*gocli.DeletePipelineTemplateCommand(),
-		*gocli.DeletePipelineConfigCommand(),
-		*gocli.ListPipelineGroupsCommand(),
-		*gocli.GetPipelineHistoryCommand(),
-		*gocli.GetPipelineCommand(),
-		*gocli.CreatePipelineConfigCommand(),
-		*gocli.GenerateJSONSchemaCommand(),
-		*gocli.GetPipelineStatusCommand(),
-		*gocli.PausePipelineCommand(),
-		*gocli.UnpausePipelineCommand(),
-		*gocli.ReleasePipelineLockCommand(),
-		*gocli.GetConfigurationCommand(),
-		*gocli.EncryptCommand(),
-		*gocli.GetVersionCommand(),
-		*gocli.ListPluginsCommand(),
-		*gocli.GetPluginCommand(),
-		*gocli.ListScheduledJobsCommand(),
-	}
+	app.Commands = gocli.GetCliCommands()
+
+	app.Metadata = map[string]interface{}{}
+	app.Metadata["c"] = gocli.NewCliClient
 
 	app.Flags = []cli.Flag{
-		cli.StringFlag{Name: "server", EnvVar: gocd.EnvVarServer},
-		cli.StringFlag{Name: "username", EnvVar: gocd.EnvVarUsername},
-		cli.StringFlag{Name: "password", EnvVar: gocd.EnvVarPassword},
-		cli.BoolFlag{Name: "ssl_check", EnvVar: gocd.EnvVarSkipSsl},
+		cli.StringFlag{
+			Name:   "profile",
+			EnvVar: gocd.EnvVarDefaultProfile,
+		},
+		cli.StringFlag{
+			Name:   "server",
+			EnvVar: gocd.EnvVarServer,
+		},
+		cli.StringFlag{
+			Name:   "username",
+			EnvVar: gocd.EnvVarUsername,
+		},
+		cli.StringFlag{
+			Name:   "password",
+			EnvVar: gocd.EnvVarPassword,
+		},
+		cli.BoolFlag{
+			Name:   "skip_ssl_check",
+			EnvVar: gocd.EnvVarSkipSsl,
+		},
 	}
 
 	sort.Sort(cli.CommandsByName(app.Commands))
 
-	app.Run(os.Args)
+	return app
 }

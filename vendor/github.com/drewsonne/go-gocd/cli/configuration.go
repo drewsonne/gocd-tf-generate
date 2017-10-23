@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"github.com/drewsonne/go-gocd/gocd"
 	"github.com/urfave/cli"
 )
 
@@ -14,42 +15,31 @@ const (
 )
 
 // GetConfigurationAction gets a list of agents and return them.
-func GetConfigurationAction(c *cli.Context) error {
-	pgs, r, err := cliAgent(c).Configuration.Get(context.Background())
-	if err != nil {
-		return handleOutput(nil, r, "GetConfiguration", err)
-	}
-
-	return handleOutput(pgs, r, "GetConfiguration", err)
+func getConfigurationAction(client *gocd.Client, c *cli.Context) (r interface{}, resp *gocd.APIResponse, err error) {
+	return client.Configuration.Get(context.Background())
 }
 
 // GetVersionAction returns version information about GoCD
-func GetVersionAction(c *cli.Context) error {
-	v, r, err := cliAgent(c).Configuration.GetVersion(context.Background())
-	if err != nil {
-		return handleOutput(nil, r, "GetVersion", err)
-	}
-
-	return handleOutput(v, r, "GetVersion", err)
-
+func getVersionAction(client *gocd.Client, c *cli.Context) (r interface{}, resp *gocd.APIResponse, err error) {
+	return client.Configuration.GetVersion(context.Background())
 }
 
 // GetConfigurationCommand handles the interaction between the cli flags and the action handler for delete-agents
-func GetConfigurationCommand() *cli.Command {
+func getConfigurationCommand() *cli.Command {
 	return &cli.Command{
 		Name:     GetConfigurationCommandName,
 		Usage:    GetConfigurationCommandUsage,
-		Action:   GetConfigurationAction,
+		Action:   ActionWrapper(getConfigurationAction),
 		Category: "Configuration",
 	}
 }
 
 // GetVersionCommand handles the interaction between the cli flags and the action handler for delete-agents
-func GetVersionCommand() *cli.Command {
+func getVersionCommand() *cli.Command {
 	return &cli.Command{
 		Name:     GetVersionCommandName,
 		Usage:    GetVersionCommandUsage,
-		Action:   GetVersionAction,
+		Action:   ActionWrapper(getVersionAction),
 		Category: "Configuration",
 	}
 }

@@ -1,6 +1,7 @@
 ignore:
   - gocd/gen_*.go
   - gen_*.go
+  - cli/*.go
 
 coverage:
   precision: 2

@@ -3,7 +3,6 @@ package gocd
 import (
 	"context"
 	"fmt"
-	"net/url"
 )
 
 // PipelinesService describes the HAL _link resource for the api response object for a pipelineconfig
@@ -18,17 +17,17 @@ type PipelineRequest struct {
 // Pipeline describes a pipeline object
 type Pipeline struct {
 	Group                 string                 `json:"group,omitempty"`
-	Links                 *PipelineLinks         `json:"_links,omitempty"`
+	Links                 *HALLinks              `json:"_links,omitempty"`
 	Name                  string                 `json:"name"`
 	LabelTemplate         string                 `json:"label_template,omitempty"`
 	EnablePipelineLocking bool                   `json:"enable_pipeline_locking,omitempty"`
 	Template              string                 `json:"template,omitempty"`
 	Origin                *PipelineConfigOrigin  `json:"origin,omitempty"`
-	Parameters            []*Parameter           `json:"parameters"`
-	EnvironmentVariables  []*EnvironmentVariable `json:"environment_variables"`
+	Parameters            []*Parameter           `json:"parameters,omitempty"`
+	EnvironmentVariables  []*EnvironmentVariable `json:"environment_variables,omitempty"`
 	Materials             []Material             `json:"materials,omitempty"`
 	Label                 string                 `json:"label,omitempty"`
-	Stages                []*Stage               `json:"stages"`
+	Stages                []*Stage               `json:"stages,omitempty"`
 	Version               string                 `json:"version,omitempty"`
 	//TrackingTool          string                 `json:"tracking_tool"`
 	//Timer                 string                 `json:"timer"`
@@ -44,14 +43,6 @@ type Parameter struct {
 type PipelineConfigOrigin struct {
 	Type string `json:"type"`
 	File string `json:"file"`
-}
-
-// PipelineLinks describes the HAL _link resource for the api response object for a collection of pipeline objects.
-//go:generate gocd-response-links-generator -type=PipelineLinks
-type PipelineLinks struct {
-	Self *url.URL `json:"self"`
-	Doc  *url.URL `json:"doc"`
-	Find *url.URL `json:"find"`
 }
 
 // Material describes an artifact dependency for a pipeline object.
@@ -75,6 +66,7 @@ type MaterialAttributes struct {
 	ShallowClone    bool            `json:"shallow_clone,omitempty"`
 	Pipeline        string          `json:"pipeline,omitempty"`
 	Stage           string          `json:"stage,omitempty"`
+	Ref             string          `json:"ref"`
 }
 
 // MaterialFilter describes which globs to ignore
@@ -189,8 +181,7 @@ func (pgs *PipelinesService) GetHistory(ctx context.Context, name string, offset
 func (pgs *PipelinesService) pipelineAction(ctx context.Context, name string, action string) (bool, *APIResponse, error) {
 
 	_, resp, err := pgs.client.postAction(ctx, &APIClientRequest{
-		Path:         fmt.Sprintf("pipelines/%s/%s", name, action),
-		ResponseType: responseTypeJSON,
+		Path: fmt.Sprintf("pipelines/%s/%s", name, action),
 		Headers: map[string]string{
 			"Confirm": "true",
 		},

@@ -1,7 +1,9 @@
 dist: trusty
 sudo: required
 language: go
-go: 1.8.3
+go: 1.9
+services:
+  - docker
 install:
   - make setup
   - gem install fpm
@@ -10,10 +12,11 @@ install:
   - export PATH=/snap/bin:$PATH
   - sudo snap install snapcraft --candidate --classic
 script:
-  - make test
+  - make ci
   - test -n "$TRAVIS_TAG" || go run main.go --skip-validate --skip-publish
 after_success:
   - bash <(curl -s https://codecov.io/bash)
+  - test -n "$TRAVIS_TAG" && docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
   - test -n "$TRAVIS_TAG" && go run main.go
 notifications:
   email: false

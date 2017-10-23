@@ -1,12 +1,12 @@
 package gocd
 
 // GetStages from the pipeline template
-func (pt *PipelineTemplate) GetStages() []*Stage {
+func (pt PipelineTemplate) GetStages() []*Stage {
 	return pt.Stages
 }
 
 // GetStage from the pipeline template
-func (pt *PipelineTemplate) GetStage(stageName string) *Stage {
+func (pt PipelineTemplate) GetStage(stageName string) *Stage {
 	for _, stage := range pt.Stages {
 		if stage.Name == stageName {
 			return stage
@@ -16,7 +16,7 @@ func (pt *PipelineTemplate) GetStage(stageName string) *Stage {
 }
 
 // GetName of the pipeline template
-func (pt *PipelineTemplate) GetName() string {
+func (pt PipelineTemplate) GetName() string {
 	return pt.Name
 }
 
@@ -36,7 +36,7 @@ func (pt *PipelineTemplate) RemoveLinks() {
 }
 
 // Pipelines returns a list of Pipelines attached to this PipelineTemplate object.
-func (pt *PipelineTemplate) Pipelines() []*Pipeline {
+func (pt PipelineTemplate) Pipelines() []*Pipeline {
 	return pt.Embedded.Pipelines
 }
 
@@ -49,4 +49,24 @@ func (pt *PipelineTemplate) SetStage(newStage *Stage) {
 		}
 	}
 	pt.AddStage(newStage)
+}
+
+// SetVersion sets a version string for this pipeline
+func (pt *PipelineTemplate) SetVersion(version string) {
+	pt.Version = version
+}
+
+// GetVersion retrieves a version string for this pipeline
+func (pt PipelineTemplate) GetVersion() (version string) {
+	return pt.Version
+}
+
+// SetVersion sets a version string for this pipeline
+func (pt *PipelineTemplateRequest) SetVersion(version string) {
+	pt.Version = version
+}
+
+// GetVersion retrieves a version string for this pipeline
+func (pt PipelineTemplateRequest) GetVersion() (version string) {
+	return pt.Version
 }

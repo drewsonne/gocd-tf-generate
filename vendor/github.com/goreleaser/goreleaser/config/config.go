@@ -13,6 +13,13 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
+// GitHubURLs holds the URLs to be used when using github enterprise
+type GitHubURLs struct {
+	API      string `yaml:"api,omitempty"`
+	Upload   string `yaml:"upload,omitempty"`
+	Download string `yaml:"download,omitempty"`
+}
+
 // Repo represents any kind of repo (github, gitlab, etc)
 type Repo struct {
 	Owner string `yaml:",omitempty"`
@@ -24,24 +31,34 @@ type Repo struct {
 
 // String of the repo, e.g. owner/name
 func (r Repo) String() string {
+	if r.Owner == "" && r.Name == "" {
+		return ""
+	}
 	return r.Owner + "/" + r.Name
 }
 
 // Homebrew contains the brew section
 type Homebrew struct {
-	GitHub       Repo     `yaml:",omitempty"`
-	Folder       string   `yaml:",omitempty"`
-	Caveats      string   `yaml:",omitempty"`
-	Plist        string   `yaml:",omitempty"`
-	Install      string   `yaml:",omitempty"`
-	Dependencies []string `yaml:",omitempty"`
-	Test         string   `yaml:",omitempty"`
-	Conflicts    []string `yaml:",omitempty"`
-	Description  string   `yaml:",omitempty"`
-	Homepage     string   `yaml:",omitempty"`
+	GitHub       Repo         `yaml:",omitempty"`
+	CommitAuthor CommitAuthor `yaml:"commit_author,omitempty"`
+	Folder       string       `yaml:",omitempty"`
+	Caveats      string       `yaml:",omitempty"`
+	Plist        string       `yaml:",omitempty"`
+	Install      string       `yaml:",omitempty"`
+	Dependencies []string     `yaml:",omitempty"`
+	Test         string       `yaml:",omitempty"`
+	Conflicts    []string     `yaml:",omitempty"`
+	Description  string       `yaml:",omitempty"`
+	Homepage     string       `yaml:",omitempty"`
 
 	// Capture all undefined fields and should be empty after loading
 	XXX map[string]interface{} `yaml:",inline"`
+}
+
+// CommitAuthor is the author of a Git commit
+type CommitAuthor struct {
+	Name  string `yaml:",omitempty"`
+	Email string `yaml:",omitempty"`
 }
 
 // Hooks define actions to run before and/or after something
@@ -92,6 +109,7 @@ type Archive struct {
 	Format          string            `yaml:",omitempty"`
 	FormatOverrides []FormatOverride  `yaml:"format_overrides,omitempty"`
 	NameTemplate    string            `yaml:"name_template,omitempty"`
+	WrapInDirectory bool              `yaml:"wrap_in_directory,omitempty"`
 	Replacements    map[string]string `yaml:",omitempty"`
 	Files           []string          `yaml:",omitempty"`
 
@@ -101,9 +119,10 @@ type Archive struct {
 
 // Release config used for the GitHub release
 type Release struct {
-	GitHub Repo `yaml:",omitempty"`
-	Draft  bool `yaml:",omitempty"`
-
+	GitHub       Repo   `yaml:",omitempty"`
+	Draft        bool   `yaml:",omitempty"`
+	Prerelease   bool   `yaml:",omitempty"`
+	NameTemplate string `yaml:"name_template,omitempty"`
 	// Capture all undefined fields and should be empty after loading
 	XXX map[string]interface{} `yaml:",inline"`
 }
@@ -159,6 +178,38 @@ type Checksum struct {
 	XXX map[string]interface{} `yaml:",inline"`
 }
 
+// Docker image config
+type Docker struct {
+	Binary     string   `yaml:",omitempty"`
+	Goos       string   `yaml:",omitempty"`
+	Goarch     string   `yaml:",omitempty"`
+	Goarm      string   `yaml:",omitempty"`
+	Image      string   `yaml:",omitempty"`
+	Dockerfile string   `yaml:",omitempty"`
+	Latest     bool     `yaml:",omitempty"`
+	Files      []string `yaml:"extra_files,omitempty"`
+
+	// Capture all undefined fields and should be empty after loading
+	XXX map[string]interface{} `yaml:",inline"`
+}
+
+// Filters config
+type Filters struct {
+	Exclude []string `yaml:",omitempty"`
+
+	// Capture all undefined fields and should be empty after loading
+	XXX map[string]interface{} `yaml:",inline"`
+}
+
+// Changelog Config
+type Changelog struct {
+	Filters Filters `yaml:",omitempty"`
+	Sort    string  `yaml:",omitempty"`
+
+	// Capture all undefined fields and should be empty after loading
+	XXX map[string]interface{} `yaml:",inline"`
+}
+
 // Project includes all project configuration
 type Project struct {
 	ProjectName string    `yaml:"project_name,omitempty"`
@@ -170,9 +221,14 @@ type Project struct {
 	Snapcraft   Snapcraft `yaml:",omitempty"`
 	Snapshot    Snapshot  `yaml:",omitempty"`
 	Checksum    Checksum  `yaml:",omitempty"`
+	Dockers     []Docker  `yaml:",omitempty"`
+	Changelog   Changelog `yaml:",omitempty"`
 
 	// this is a hack ¯\_(ツ)_/¯
 	SingleBuild Build `yaml:"build,omitempty"`
+
+	// should be set if using github enterprise
+	GitHubURLs GitHubURLs `yaml:"github_urls,omitempty"`
 
 	// test only property indicating the path to the dist folder
 	Dist string `yaml:"-"`
@@ -231,6 +287,11 @@ func checkOverflows(config Project) error {
 	}
 	overflow.check(config.Snapshot.XXX, "snapshot")
 	overflow.check(config.Checksum.XXX, "checksum")
+	for i, docker := range config.Dockers {
+		overflow.check(docker.XXX, fmt.Sprintf("docker[%d]", i))
+	}
+	overflow.check(config.Changelog.XXX, "changelog")
+	overflow.check(config.Changelog.Filters.XXX, "changelog.filters")
 	return overflow.err()
 }
 

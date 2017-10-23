@@ -1,16 +1,27 @@
 hash: cda3b9b76a4963ea17a6d17f863e6f676e835d87294901747236f3564f67e07f
-updated: 2017-09-12T08:06:20.881382216+01:00
+updated: 2017-10-23T14:31:44.946334423+01:00
 imports:
 - name: github.com/drewsonne/go-gocd
-  version: 4e4c52ddeec3906c5f2296d040bc9e191bfbd3df
+  version: a6ae84643dc3f9738e5f928978fedc49859da5fc
   subpackages:
   - gocd
 - name: github.com/pkg/errors
   version: 645ef00459ed84a119197bfb8d8205042c6df63d
+- name: github.com/Sirupsen/logrus
+  version: 89742aefa4b206dcf400792f3bd35b542998eb3b
+- name: golang.org/x/crypto
+  version: edd5e9b0879d13ee6970a50153d85b8fec9f7686
+  subpackages:
+  - ssh/terminal
+- name: golang.org/x/sys
+  version: 8dbc5d05d6edcc104950cc299a1ce6641235bc86
+  subpackages:
+  - unix
+  - windows
 - name: gopkg.in/yaml.v2
   version: eb3733d160e74a9c7e442f435eb3bea458e1d19f
 testImports:
 - name: github.com/goreleaser/goreleaser
-  version: 272bd93a31d45a4fc41f6dca3a0776dae39325d1
+  version: 76087d53cd17b1216cf20c5c7c2750e818f1f2a4
   subpackages:
   - assert

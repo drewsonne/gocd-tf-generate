@@ -25,7 +25,7 @@ var Schemas = map[string]interface{}{
 }
 
 // GenerateJSONSchemaAction will generate the list of files for the JSON Schema for the defined structs.
-func GenerateJSONSchemaAction(c *cli.Context) error {
+func generateJSONSchemaAction(client *gocd.Client, c *cli.Context) (r interface{}, resp *gocd.APIResponse, err error) {
 	directory := "schema"
 	os.Mkdir(directory, os.FileMode(int(0777)))
 	for k, s := range Schemas {
@@ -33,21 +33,20 @@ func GenerateJSONSchemaAction(c *cli.Context) error {
 		schema := generator.Generate(s)
 		schemaPath := fmt.Sprintf("%s/%s.json", directory, strings.ToLower(k))
 		fmt.Printf("Writing '%s' to disk '%s'...\n", k, schemaPath)
-		err := ioutil.WriteFile(schemaPath, []byte(schema), 0644)
-		if err != nil {
-			return err
+		if err := ioutil.WriteFile(schemaPath, []byte(schema), 0644); err != nil {
+			return nil, nil, err
 		}
 	}
 
-	return nil
+	return nil, nil, nil
 }
 
 // GenerateJSONSchemaCommand handles the interaction between the cli flags and the action handler for generate-json
-func GenerateJSONSchemaCommand() *cli.Command {
+func generateJSONSchemaCommand() *cli.Command {
 	return &cli.Command{
 		Name:     GenerateJSONSchemaCommandName,
 		Usage:    GenerateJSONSchemaCommandUsage,
 		Category: "Schema",
-		Action:   GenerateJSONSchemaAction,
+		Action:   ActionWrapper(generateJSONSchemaAction),
 	}
 }

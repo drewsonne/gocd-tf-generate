@@ -2,7 +2,7 @@ package cli
 
 import (
 	"context"
-	"errors"
+	"github.com/drewsonne/go-gocd/gocd"
 	"github.com/urfave/cli"
 )
 
@@ -23,91 +23,67 @@ const (
 )
 
 // GetPipelineStatusAction handles the business logic between the command objects and the go-gocd library.
-func GetPipelineStatusAction(c *cli.Context) error {
-	if c.String("name") == "" {
-		return handleOutput(nil, nil, "GetPipelineStatus", errors.New("'--name' is missing"))
+func getPipelineStatusAction(client *gocd.Client, c *cli.Context) (r interface{}, resp *gocd.APIResponse, err error) {
+	var name string
+	if name = c.String("name"); name == "" {
+		return nil, nil, NewFlagError("name")
 	}
-	pgs, r, err := cliAgent(c).Pipelines.GetStatus(context.Background(), c.String("name"), -1)
-	if err != nil {
-		return handleOutput(nil, r, "GetPipelineStatus", err)
-	}
-
-	return handleOutput(pgs, r, "GetPipelineStatus", err)
+	return client.Pipelines.GetStatus(context.Background(), name, -1)
 }
 
 // GetPipelineAction handles the business logic between the command objects and the go-gocd library.
-func GetPipelineAction(c *cli.Context) error {
-	if c.String("name") == "" {
-		return handleOutput(nil, nil, "GetPipeline", errors.New("'--name' is missing"))
+func getPipelineAction(client *gocd.Client, c *cli.Context) (r interface{}, resp *gocd.APIResponse, err error) {
+	var name string
+	if name = c.String("name"); name == "" {
+		return nil, nil, NewFlagError("name")
 	}
-	pgs, r, err := cliAgent(c).Pipelines.GetInstance(context.Background(), c.String("name"), -1)
-	if err != nil {
-		return handleOutput(nil, r, "GetPipeline", err)
-	}
-
-	return handleOutput(pgs, r, "GetPipeline", err)
+	return client.PipelineConfigs.Get(context.Background(), c.String("name"))
 }
 
 // GetPipelineHistoryAction handles the interaction between the cli flags and the action handler for
 // get-pipeline-history-action
-func GetPipelineHistoryAction(c *cli.Context) error {
-	if c.String("name") == "" {
-		return handleOutput(nil, nil, "GetPipelineHistory", errors.New("'--name' is missing"))
+func getPipelineHistoryAction(client *gocd.Client, c *cli.Context) (r interface{}, resp *gocd.APIResponse, err error) {
+	var name string
+	if name = c.String("name"); name == "" {
+		return nil, nil, NewFlagError("name")
 	}
 
-	pgs, r, err := cliAgent(c).Pipelines.GetHistory(context.Background(), c.String("name"), -1)
-	if err != nil {
-		return handleOutput(nil, r, "GetPipelineHistory", err)
-	}
-
-	return handleOutput(pgs, r, "GetPipelineHistory", err)
+	return client.Pipelines.GetHistory(context.Background(), c.String("name"), -1)
 }
 
 // PausePipelineAction handles the business logic between the command objects and the go-gocd library.
-func PausePipelineAction(c *cli.Context) error {
-	if c.String("name") == "" {
-		return handleOutput(nil, nil, "PausePipeline", errors.New("'--name' is missing"))
+func pausePipelineAction(client *gocd.Client, c *cli.Context) (r interface{}, resp *gocd.APIResponse, err error) {
+	var name string
+	if name = c.String("name"); name == "" {
+		return nil, nil, NewFlagError("name")
 	}
 
-	pgs, r, err := cliAgent(c).Pipelines.Pause(context.Background(), c.String("name"))
-	if err != nil {
-		return handleOutput(nil, r, "PausePipeline", err)
-	}
-
-	return handleOutput(pgs, r, "PausePipeline", err)
+	return client.Pipelines.Pause(context.Background(), c.String("name"))
 }
 
 // UnpausePipelineAction handles the business logic between the command objects and the go-gocd library.
-func UnpausePipelineAction(c *cli.Context) error {
-	if c.String("name") == "" {
-		return handleOutput(nil, nil, "UnpausePipeline", errors.New("'--name' is missing"))
+func unpausePipelineAction(client *gocd.Client, c *cli.Context) (r interface{}, resp *gocd.APIResponse, err error) {
+	var name string
+	if name = c.String("name"); name == "" {
+		return nil, nil, NewFlagError("name")
 	}
 
-	pgs, r, err := cliAgent(c).Pipelines.Unpause(context.Background(), c.String("name"))
-	if err != nil {
-		return handleOutput(nil, r, "UnpausePipeline", err)
-	}
-
-	return handleOutput(pgs, r, "UnpausePipeline", err)
+	return client.Pipelines.Unpause(context.Background(), c.String("name"))
 }
 
 // ReleasePipelineLockAction handles the business logic between the command objects and the go-gocd library.
-func ReleasePipelineLockAction(c *cli.Context) error {
-	if c.String("name") == "" {
-		return handleOutput(nil, nil, "ReleasePipelinelock", errors.New("'--name' is missing"))
+func releasePipelineLockAction(client *gocd.Client, c *cli.Context) (r interface{}, resp *gocd.APIResponse, err error) {
+	var name string
+	if name = c.String("name"); name == "" {
+		return nil, nil, NewFlagError("name")
 	}
 
-	pgs, r, err := cliAgent(c).Pipelines.ReleaseLock(context.Background(), c.String("name"))
-	if err != nil {
-		return handleOutput(nil, r, "ReleasePipelinelock", err)
-	}
-
-	return handleOutput(pgs, r, "ReleasePipelinelock", err)
+	return client.Pipelines.ReleaseLock(context.Background(), c.String("name"))
 }
 
 // GetPipelineStatusCommand handles the interaction between the cli flags and the action handler for
 // get-pipeline
-func GetPipelineStatusCommand() *cli.Command {
+func getPipelineStatusCommand() *cli.Command {
 	return &cli.Command{
 		Name:     GetPipelineStatusCommandName,
 		Usage:    GetPipelineStatusCommandUsage,
@@ -115,13 +91,13 @@ func GetPipelineStatusCommand() *cli.Command {
 		Flags: []cli.Flag{
 			cli.StringFlag{Name: "name"},
 		},
-		Action: GetPipelineStatusAction,
+		Action: ActionWrapper(getPipelineStatusAction),
 	}
 }
 
 // PausePipelineCommand handles the interaction between the cli flags and the action handler for
 // get-pipeline
-func PausePipelineCommand() *cli.Command {
+func pausePipelineCommand() *cli.Command {
 	return &cli.Command{
 		Name:     PausePipelineCommandName,
 		Usage:    PausePipelineCommandUsage,
@@ -129,13 +105,13 @@ func PausePipelineCommand() *cli.Command {
 		Flags: []cli.Flag{
 			cli.StringFlag{Name: "name"},
 		},
-		Action: PausePipelineAction,
+		Action: ActionWrapper(pausePipelineAction),
 	}
 }
 
 // UnpausePipelineCommand handles the interaction between the cli flags and the action handler for
 // get-pipeline
-func UnpausePipelineCommand() *cli.Command {
+func unpausePipelineCommand() *cli.Command {
 	return &cli.Command{
 		Name:     UnpausePipelineCommandName,
 		Usage:    UnpausePipelineCommandUsage,
@@ -143,13 +119,13 @@ func UnpausePipelineCommand() *cli.Command {
 		Flags: []cli.Flag{
 			cli.StringFlag{Name: "name"},
 		},
-		Action: UnpausePipelineAction,
+		Action: ActionWrapper(unpausePipelineAction),
 	}
 }
 
 // ReleasePipelineLockCommand handles the interaction between the cli flags and the action handler for
 // get-pipeline
-func ReleasePipelineLockCommand() *cli.Command {
+func releasePipelineLockCommand() *cli.Command {
 	return &cli.Command{
 		Name:     ReleasePipelineLockCommandName,
 		Usage:    ReleasePipelineLockCommandUsage,
@@ -157,13 +133,13 @@ func ReleasePipelineLockCommand() *cli.Command {
 		Flags: []cli.Flag{
 			cli.StringFlag{Name: "name"},
 		},
-		Action: ReleasePipelineLockAction,
+		Action: ActionWrapper(releasePipelineLockAction),
 	}
 }
 
 // GetPipelineCommand handles the interaction between the cli flags and the action handler for
 // get-pipeline
-func GetPipelineCommand() *cli.Command {
+func getPipelineCommand() *cli.Command {
 	return &cli.Command{
 		Name:     GetPipelineCommandName,
 		Usage:    GetPipelineCommandUsage,
@@ -171,13 +147,13 @@ func GetPipelineCommand() *cli.Command {
 		Flags: []cli.Flag{
 			cli.StringFlag{Name: "name"},
 		},
-		Action: GetPipelineAction,
+		Action: ActionWrapper(getPipelineAction),
 	}
 }
 
 // GetPipelineHistoryCommand handles the interaction between the cli flags and the action handler for
 // get-pipeline-history-action
-func GetPipelineHistoryCommand() *cli.Command {
+func getPipelineHistoryCommand() *cli.Command {
 	return &cli.Command{
 		Name:     GetPipelineHistoryCommandName,
 		Usage:    GetPipelineHistoryCommandUsage,
@@ -185,6 +161,6 @@ func GetPipelineHistoryCommand() *cli.Command {
 		Flags: []cli.Flag{
 			cli.StringFlag{Name: "name"},
 		},
-		Action: GetPipelineHistoryAction,
+		Action: ActionWrapper(getPipelineHistoryAction),
 	}
 }

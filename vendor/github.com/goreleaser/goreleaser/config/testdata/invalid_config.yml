@@ -27,4 +27,9 @@ fpm:
   invalid_fpm: 1
 snapshot:
   invalid_snapshot: 1
-
+dockers:
+  - invalid_docker: 1
+changelog:
+  invalid_changelog: 1
+  filters:
+    invalid_filters: 1

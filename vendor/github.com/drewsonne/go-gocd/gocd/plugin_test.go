@@ -30,10 +30,10 @@ func testPluginAPIList(t *testing.T) {
 	}
 	assert.NotNil(t, plugins)
 
-	assert.NotNil(t, plugins.Links.Doc)
-	assert.Equal(t, "https://api.gocd.org/#plugin-info", plugins.Links.Doc.String())
-	assert.NotNil(t, plugins.Links.Self)
-	assert.Equal(t, "https://ci.example.com/go/api/admin/plugin_info", plugins.Links.Self.String())
+	assert.NotNil(t, plugins.Links.Get("Doc"))
+	assert.Equal(t, "https://api.gocd.org/#plugin-info", plugins.Links.Get("Doc").URL.String())
+	assert.NotNil(t, plugins.Links.Get("Self"))
+	assert.Equal(t, "https://ci.example.com/go/api/admin/plugin_info", plugins.Links.Get("Self").URL.String())
 
 	assert.NotNil(t, plugins.Embedded)
 	assert.NotNil(t, plugins.Embedded.PluginInfo)
@@ -41,9 +41,9 @@ func testPluginAPIList(t *testing.T) {
 
 	pi := plugins.Embedded.PluginInfo[0]
 	assert.NotNil(t, pi.Links)
-	assert.Equal(t, "https://ci.example.com/go/api/admin/plugin_info/plugin_id", pi.Links.Self.String())
-	assert.Equal(t, "https://api.gocd.org/#plugin-info", pi.Links.Doc.String())
-	assert.Equal(t, "https://ci.example.com/go/api/admin/plugin_info/:id", pi.Links.Find.String())
+	assert.Equal(t, "https://ci.example.com/go/api/admin/plugin_info/plugin_id", pi.Links.Get("Self").URL.String())
+	assert.Equal(t, "https://api.gocd.org/#plugin-info", pi.Links.Get("Doc").URL.String())
+	assert.Equal(t, "https://ci.example.com/go/api/admin/plugin_info/:id", pi.Links.Get("Find").URL.String())
 
 	assert.Equal(t, "test-plugin", pi.ID)
 	assert.Equal(t, "SCM Plugin", pi.Name)

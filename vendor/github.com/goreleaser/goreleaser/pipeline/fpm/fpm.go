@@ -12,7 +12,6 @@ import (
 	"github.com/goreleaser/goreleaser/context"
 	"github.com/goreleaser/goreleaser/internal/linux"
 	"github.com/goreleaser/goreleaser/pipeline"
-	"golang.org/x/sync/errgroup"
 )
 
 // ErrNoFPM is shown when fpm cannot be found in $PATH
@@ -35,24 +34,25 @@ func (Pipe) Run(ctx *context.Context) error {
 	if err != nil {
 		return ErrNoFPM
 	}
+	return doRun(ctx)
+}
 
-	var g errgroup.Group
+func doRun(ctx *context.Context) error {
 	for _, format := range ctx.Config.FPM.Formats {
 		for platform, groups := range ctx.Binaries {
 			if !strings.Contains(platform, "linux") {
 				log.WithField("platform", platform).Debug("skipped non-linux builds for fpm")
 				continue
 			}
-			format := format
 			arch := linux.Arch(platform)
 			for folder, binaries := range groups {
-				g.Go(func() error {
-					return create(ctx, format, folder, arch, binaries)
-				})
+				if err := create(ctx, format, folder, arch, binaries); err != nil {
+					return err
+				}
 			}
 		}
 	}
-	return g.Wait()
+	return nil
 }
 
 func create(ctx *context.Context, format, folder, arch string, binaries []context.Binary) error {
@@ -61,42 +61,7 @@ func create(ctx *context.Context, format, folder, arch string, binaries []contex
 	var log = log.WithField("format", format).WithField("arch", arch)
 	log.WithField("file", file).Info("creating fpm archive")
 
-	var options = []string{
-		"--input-type", "dir",
-		"--output-type", format,
-		"--name", ctx.Config.ProjectName,
-		"--version", ctx.Version,
-		"--architecture", arch,
-		"--package", file,
-		"--force",
-	}
-
-	if ctx.Config.FPM.Vendor != "" {
-		options = append(options, "--vendor", ctx.Config.FPM.Vendor)
-	}
-	if ctx.Config.FPM.Homepage != "" {
-		options = append(options, "--url", ctx.Config.FPM.Homepage)
-	}
-	if ctx.Config.FPM.Maintainer != "" {
-		options = append(options, "--maintainer", ctx.Config.FPM.Maintainer)
-	}
-	if ctx.Config.FPM.Description != "" {
-		options = append(options, "--description", ctx.Config.FPM.Description)
-	}
-	if ctx.Config.FPM.License != "" {
-		options = append(options, "--license", ctx.Config.FPM.License)
-	}
-	for _, dep := range ctx.Config.FPM.Dependencies {
-		options = append(options, "--depends", dep)
-	}
-	for _, conflict := range ctx.Config.FPM.Conflicts {
-		options = append(options, "--conflicts", conflict)
-	}
-
-	// FPM requires --rpm-os=linux if your rpm target is linux
-	if format == "rpm" {
-		options = append(options, "--rpm-os", "linux")
-	}
+	var options = basicOptions(ctx, format, arch, file)
 
 	for _, binary := range binaries {
 		// This basically tells fpm to put the binary in the /usr/local/bin
@@ -128,4 +93,45 @@ func create(ctx *context.Context, format, folder, arch string, binaries []contex
 	}
 	ctx.AddArtifact(file)
 	return nil
+}
+
+func basicOptions(ctx *context.Context, format, arch, file string) []string {
+	var options = []string{
+		"--input-type", "dir",
+		"--output-type", format,
+		"--name", ctx.Config.ProjectName,
+		"--version", ctx.Version,
+		"--architecture", arch,
+		"--package", file,
+		"--force",
+		"--debug",
+	}
+
+	if ctx.Config.FPM.Vendor != "" {
+		options = append(options, "--vendor", ctx.Config.FPM.Vendor)
+	}
+	if ctx.Config.FPM.Homepage != "" {
+		options = append(options, "--url", ctx.Config.FPM.Homepage)
+	}
+	if ctx.Config.FPM.Maintainer != "" {
+		options = append(options, "--maintainer", ctx.Config.FPM.Maintainer)
+	}
+	if ctx.Config.FPM.Description != "" {
+		options = append(options, "--description", ctx.Config.FPM.Description)
+	}
+	if ctx.Config.FPM.License != "" {
+		options = append(options, "--license", ctx.Config.FPM.License)
+	}
+	for _, dep := range ctx.Config.FPM.Dependencies {
+		options = append(options, "--depends", dep)
+	}
+	for _, conflict := range ctx.Config.FPM.Conflicts {
+		options = append(options, "--conflicts", conflict)
+	}
+
+	// FPM requires --rpm-os=linux if your rpm target is linux
+	if format == "rpm" {
+		options = append(options, "--rpm-os", "linux")
+	}
+	return options
 }

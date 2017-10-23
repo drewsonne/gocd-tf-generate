@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"github.com/drewsonne/go-gocd/gocd"
 	"github.com/urfave/cli"
 )
 
@@ -12,20 +13,16 @@ const (
 )
 
 // ListScheduledJobsAction gets a list of agents and return them.
-func ListScheduledJobsAction(c *cli.Context) error {
-	encryptedValue, r, err := cliAgent(c).Jobs.ListScheduled(context.Background())
-	if err != nil {
-		return handleOutput(nil, r, "ListScheduledJobs", err)
-	}
-	return handleOutput(encryptedValue, r, "ListScheduledJobs", err)
+func listScheduledJobsAction(client *gocd.Client, c *cli.Context) (r interface{}, resp *gocd.APIResponse, err error) {
+	return client.Jobs.ListScheduled(context.Background())
 }
 
 // ListScheduledJobsCommand provides interface between handler and action
-func ListScheduledJobsCommand() *cli.Command {
+func listScheduledJobsCommand() *cli.Command {
 	return &cli.Command{
 		Name:     ListScheduledJobsCommandName,
 		Usage:    ListScheduledJobsCommandUsage,
-		Action:   ListScheduledJobsAction,
+		Action:   ActionWrapper(listScheduledJobsAction),
 		Category: "Jobs",
 	}
 }

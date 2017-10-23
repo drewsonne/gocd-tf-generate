@@ -2,6 +2,11 @@ package gocd
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	log "github.com/Sirupsen/logrus"
+	"net/http"
+	"strings"
 )
 
 // APIClientRequest helper struct to reduce amount of code.
@@ -29,6 +34,7 @@ func (c *Client) genericHeadAction(ctx context.Context, path string, apiversion 
 	return exists, resp, err
 
 }
+
 func (c *Client) patchAction(ctx context.Context, r *APIClientRequest) (interface{}, *APIResponse, error) {
 	r.Method = "PATCH"
 	return c.httpAction(ctx, r)
@@ -63,23 +69,28 @@ func (c *Client) deleteAction(ctx context.Context, path string, apiversion strin
 	return a.Message, resp, err
 }
 
-func (c *Client) httpAction(ctx context.Context, r *APIClientRequest) (interface{}, *APIResponse, error) {
+func (c *Client) httpAction(ctx context.Context, r *APIClientRequest) (responeBody interface{}, resp *APIResponse, err error) {
+
+	log.Debugf("HTTP Request\n%s %s", r.Method, r.Path)
 
 	if r.ResponseType == "" {
 		r.ResponseType = responseTypeJSON
 	}
 
-	// Build the request
-	var reqBody interface{}
-	if r.RequestBody != nil {
-		reqBody = r.RequestBody
-	} else {
-		reqBody = nil
-	}
+	versionAction(r.RequestBody, func(ver Versioned) {
+		if r.Headers == nil {
+			r.Headers = map[string]string{}
+		}
+		r.Headers["If-Match"] = fmt.Sprintf("\"%s\"", ver.GetVersion())
+	})
 
-	req, err := c.NewRequest(r.Method, r.Path, reqBody, r.APIVersion)
-	if err != nil {
+	// Build the request
+	var req *APIRequest
+	if req, err = c.NewRequest(r.Method, r.Path, r.RequestBody, r.APIVersion); err != nil {
 		return false, nil, err
+	}
+	if r.RequestBody != nil {
+		log.Debugf("\n%s\n\n", r.RequestBody)
 	}
 
 	if len(r.Headers) > 0 {
@@ -88,6 +99,44 @@ func (c *Client) httpAction(ctx context.Context, r *APIClientRequest) (interface
 		}
 	}
 
-	resp, err := c.Do(ctx, req, &r.ResponseBody, r.ResponseType)
+	printHeaderDebug(req.HTTP.Header)
+
+	if resp, err = c.Do(ctx, req, r.ResponseBody, r.ResponseType); err != nil {
+		log.Error(err)
+		return r.ResponseBody, resp, err
+	}
+
+	versionAction(r.ResponseBody, func(ver Versioned) {
+		parseVersions(resp.HTTP, ver)
+	})
+
+	if r.ResponseType == responseTypeJSON {
+		log.Debugf("\nResponse\n%s %s\n", resp.HTTP.Proto, resp.HTTP.Status)
+		printHeaderDebug(resp.HTTP.Header)
+		b, _ := json.Marshal(r.ResponseBody)
+		log.Debugf("\n%s", b)
+	}
+
 	return r.ResponseBody, resp, err
+}
+
+func versionAction(versioned interface{}, verFunc func(versionsed Versioned)) {
+	if ver, isVersioned := (versioned).(Versioned); isVersioned {
+		verFunc(ver)
+	}
+}
+
+func printHeaderDebug(headers http.Header) {
+	for header, values := range headers {
+		for _, value := range values {
+			log.Debugf("%s: %s", header, value)
+		}
+	}
+}
+
+func parseVersions(response *http.Response, versioned Versioned) {
+	etag := response.Header.Get("Etag")
+	versioned.SetVersion(
+		strings.Replace(etag, "\"", "", -1),
+	)
 }
