@@ -48,8 +48,7 @@ resource "gocd_pipeline" "{{.Name}}" {
         submodule_folder = "{{.SubmoduleFolder}}"{{end}}{{if .ShallowClone}}
         shallow_clone = {{.ShallowClone}}{{end}}{{if .Pipeline}}
         pipeline = "{{.Pipeline}}"{{end}}{{if .Stage}}
-        stage = "{{.Stage}}"{{end}}{{if .AutoUpdate}}
-        auto_update = {{.AutoUpdate}}{{end}}
+        stage = "{{.Stage}}"{{end}}
       }{{end}}
     }, {{end}}
   ]{{end}}
