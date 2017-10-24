@@ -78,6 +78,14 @@ resource "gocd_pipeline" "{{.Name}}" {
 		fmt.Printf("Generated terraform configuration template.\nRendering template...")
 	}
 
+	for _, m := range pt.Materials {
+		if m.Type == "dependency" {
+			if m.Attributes.Name == m.Attributes.Pipeline {
+				m.Attributes.Name = ""
+			}
+		}
+	}
+
 	w := new(bytes.Buffer)
 	if err := t.Execute(w, pt); err != nil {
 		return "", err
