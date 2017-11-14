@@ -35,7 +35,8 @@ data "gocd_job_definition" "{{$containerName}}_{{$stage}}_{{.Name}}" {
   tasks = [{{range $i, $e := .Tasks}}
     "${data.gocd_task_definition.{{$containerName}}_{{$stage}}_{{$job}}_{{$i}}.json}",{{end}}
   ]{{end}}{{if .Timeout}}
-  timeout = {{.Timeout}}{{end}}{{if .EnvironmentVariables -}}
+  timeout = {{.Timeout}}{{end}}
+  {{if .EnvironmentVariables -}}
   environment_variables = [{{range .EnvironmentVariables}}{
     name = "{{.Name}}"{{if .Value}}
     value = "{{.Value}}"{{end}}{{if .EncryptedValue}}

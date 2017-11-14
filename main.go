@@ -11,8 +11,11 @@ import (
 )
 
 func main() {
+	// Version for the cli tool
+	var Version string
+
 	var id, resource, output, profile string
-	var outputToFile, debug bool
+	var outputToFile, debug, printVersion bool
 	flag.StringVar(&resource, "resource", "",
 		"Name of the resource to generate tf config for. Use '*' for all resources. Default: * ."+
 			"Allowed Values: (pipeline_template)")
@@ -21,7 +24,13 @@ func main() {
 	flag.StringVar(&profile, "profile", "default", "Specify the gocd profile to use.")
 	flag.BoolVar(&outputToFile, "to-file", false, "If supplied, output to file.")
 	flag.BoolVar(&debug, "debug", false, "Print debug logging")
+	flag.BoolVar(&printVersion, "version", false, "Print version and exit")
 	flag.Parse()
+
+	if (printVersion) {
+		fmt.Printf("gocd-tf-generate '%s'", Version)
+		return
+	}
 
 	cfg := gocd.Configuration{}
 	if err := gocd.LoadConfigByName(profile, &cfg); err != nil {

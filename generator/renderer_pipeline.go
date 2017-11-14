@@ -48,8 +48,7 @@ resource "gocd_pipeline" "{{.Name}}" {
         submodule_folder = "{{.SubmoduleFolder}}"{{end}}{{if .ShallowClone}}
         shallow_clone = {{.ShallowClone}}{{end}}{{if .Pipeline}}
         pipeline = "{{.Pipeline}}"{{end}}{{if .Stage}}
-        stage = "{{.Stage}}"{{end}}{{if .AutoUpdate}}
-        auto_update = {{.AutoUpdate}}{{end}}
+        stage = "{{.Stage}}"{{end}}
       }{{end}}
     }, {{end}}
   ]{{end}}
@@ -76,6 +75,14 @@ resource "gocd_pipeline" "{{.Name}}" {
 	}
 	if debug {
 		fmt.Printf("Generated terraform configuration template.\nRendering template...")
+	}
+
+	for _, m := range pt.Materials {
+		if m.Type == "dependency" {
+			if m.Attributes.Name == m.Attributes.Pipeline {
+				m.Attributes.Name = ""
+			}
+		}
 	}
 
 	w := new(bytes.Buffer)

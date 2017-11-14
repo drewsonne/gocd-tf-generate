@@ -1,5 +1,5 @@
 hash: cda3b9b76a4963ea17a6d17f863e6f676e835d87294901747236f3564f67e07f
-updated: 2017-10-23T14:31:44.946334423+01:00
+updated: 2017-11-14T10:39:48.432902956Z
 imports:
 - name: github.com/drewsonne/go-gocd
   version: a6ae84643dc3f9738e5f928978fedc49859da5fc
@@ -10,11 +10,11 @@ imports:
 - name: github.com/Sirupsen/logrus
   version: 89742aefa4b206dcf400792f3bd35b542998eb3b
 - name: golang.org/x/crypto
-  version: edd5e9b0879d13ee6970a50153d85b8fec9f7686
+  version: 9f005a07e0d31d45e6656d241bb5c0f2efd4bc94
   subpackages:
   - ssh/terminal
 - name: golang.org/x/sys
-  version: 8dbc5d05d6edcc104950cc299a1ce6641235bc86
+  version: 665f6529cca930e27b831a0d1dafffbe1c172924
   subpackages:
   - unix
   - windows
@@ -22,6 +22,6 @@ imports:
   version: eb3733d160e74a9c7e442f435eb3bea458e1d19f
 testImports:
 - name: github.com/goreleaser/goreleaser
-  version: 76087d53cd17b1216cf20c5c7c2750e818f1f2a4
+  version: adc2d7d4c572af20cc20290db48b664f12c158bb
   subpackages:
   - assert
