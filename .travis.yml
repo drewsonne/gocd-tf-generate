@@ -26,10 +26,6 @@ install:
 script:
   - go test ./...
 
-#script:
-#  - go generate -x $(go list ./... | grep -v vendor/) && git diff --exit-code; code=$?; git checkout -- .; (exit	$code)
-#  - make test
-
 after_success:
   - go get github.com/goreleaser/goreleaser
 
