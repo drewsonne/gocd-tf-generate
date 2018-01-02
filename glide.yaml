@@ -1,11 +1,11 @@
 package: github.com/drewsonne/gocd-tf-generate
 import:
 - package: github.com/drewsonne/go-gocd
-  version: ^0.3.21
+  version: ^0.6.9
   subpackages:
   - gocd
 testImport:
-- package: github.com/goreleaser/goreleaser
-  version: ^0.30.0
+- package: github.com/stretchr/testify
+  version: ^1.2.0
   subpackages:
   - assert

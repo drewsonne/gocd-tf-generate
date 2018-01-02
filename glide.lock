@@ -1,5 +1,5 @@
-hash: cda3b9b76a4963ea17a6d17f863e6f676e835d87294901747236f3564f67e07f
-updated: 2018-01-02T20:19:10.680497969Z
+hash: 385ff43b3340653f70b9a304bb12138cf158f4e6fd4f9ae48b92600b1ff26118
+updated: 2018-01-02T20:40:20.513885213Z
 imports:
 - name: github.com/drewsonne/go-gocd
   version: eda8abf4a0f36a2c6e82a04e829bd4060e843f05
@@ -19,7 +19,15 @@ imports:
 - name: gopkg.in/yaml.v2
   version: 287cf08546ab5e7e37d55a84f7ed3fd1db036de5
 testImports:
-- name: github.com/goreleaser/goreleaser
-  version: 6edda25b71ef38158dff9394ff5b97e28fadbedd
+- name: github.com/davecgh/go-spew
+  version: 6d212800a42e8ab5c146b8ace3490ee17e5225f9
+  subpackages:
+  - spew
+- name: github.com/pmezard/go-difflib
+  version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
+  subpackages:
+  - difflib
+- name: github.com/stretchr/testify
+  version: b91bfb9ebec76498946beb6af7c0230c7cc7ba6c
   subpackages:
   - assert
