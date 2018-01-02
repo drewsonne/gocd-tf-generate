@@ -22,8 +22,6 @@ test: lint
 	go tool vet main.go
 	bash scripts/go-test.sh
 	cat coverage.out
-#	$(MAKE) -C ./gocd test
-#	$(MAKE) -C ./cli test
 
 before_install:
 	@go get -t -v $$(go list ./... | grep -v vendor/)

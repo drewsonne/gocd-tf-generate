@@ -1,8 +1,8 @@
 hash: cda3b9b76a4963ea17a6d17f863e6f676e835d87294901747236f3564f67e07f
-updated: 2018-01-02T19:56:01.206752562Z
+updated: 2018-01-02T20:19:10.680497969Z
 imports:
 - name: github.com/drewsonne/go-gocd
-  version: 287ac57580021fb0d8bae6af679b38613ada2df5
+  version: eda8abf4a0f36a2c6e82a04e829bd4060e843f05
   subpackages:
   - gocd
 - name: github.com/sirupsen/logrus
@@ -20,6 +20,6 @@ imports:
   version: 287cf08546ab5e7e37d55a84f7ed3fd1db036de5
 testImports:
 - name: github.com/goreleaser/goreleaser
-  version: b61aec7a1cb80d5e9f85a1030f82ba856aba4cab
+  version: 6edda25b71ef38158dff9394ff5b97e28fadbedd
   subpackages:
   - assert

@@ -12,19 +12,12 @@ builds:
       - windows
       - darwin
       - linux
-
     goarch:
-      - 386
       - amd64
-
-    ignore:
-      - goos: darwin
-        goarch: 386
 
 archive:
   name_template: "gocd-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
   replacements:
-    386: i386
     amd64: x86_64
 
   format_overrides:
@@ -40,7 +33,7 @@ archive:
 fpm:
   homepage: https://github.com/drewsonne/go-gocd
   maintainer: Drew J. Sonne <drew.sonne@gmail.com>
-  license: LGPLv3
+  license: Apache2
   formats:
     - deb
     - rpm

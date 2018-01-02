@@ -68,7 +68,7 @@ func LoadConfigFromFile() (cfgs map[string]*Configuration, err error) {
 	if err != nil {
 		return
 	}
-	if _, err = os.Stat(p); os.IsExist(err) {
+	if _, err = os.Stat(p); !os.IsNotExist(err) {
 		if b, err = ioutil.ReadFile(p); err != nil {
 			return
 		}
