@@ -18,10 +18,10 @@ matrix:
   fast_finish: true
 
 before_install:
-  -	curl https://glide.sh/get | sh
+ - curl https://glide.sh/get | sh
 
 install:
-  -	glide install
+  - glide install
 
 script:
   - go test ./...
