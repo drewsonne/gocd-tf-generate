@@ -24,7 +24,7 @@ install:
   - glide install
 
 script:
-  - go test ./...
+  - go test $(glide novendor)
 
 after_success:
   - go get github.com/goreleaser/goreleaser
