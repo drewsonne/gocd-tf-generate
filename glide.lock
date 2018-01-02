@@ -1,8 +1,8 @@
 hash: 385ff43b3340653f70b9a304bb12138cf158f4e6fd4f9ae48b92600b1ff26118
-updated: 2018-01-02T20:40:20.513885213Z
+updated: 2018-01-02T21:06:43.499895377Z
 imports:
 - name: github.com/drewsonne/go-gocd
-  version: eda8abf4a0f36a2c6e82a04e829bd4060e843f05
+  version: 9bda5ce69bb3c9ae7bba85395109b54525031144
   subpackages:
   - gocd
 - name: github.com/sirupsen/logrus
