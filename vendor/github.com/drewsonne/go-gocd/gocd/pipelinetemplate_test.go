@@ -65,12 +65,8 @@ func TestPipelineTemplateCreate(t *testing.T) {
 		"test-config2",
 		[]*Stage{{}},
 	)
-	if err != nil {
-		t.Error(err)
-	}
-
+	assert.NoError(t, err)
 	assert.NotNil(t, pt)
-
 	assert.Equal(t, "mock-etag", pt.Version)
 }
 
@@ -181,7 +177,7 @@ func testGetPipelineTemplate(t *testing.T) {
 		"template1",
 	)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Len(t, template.Stages, 1)
 
 	assert.Equal(t, "mock-etag", template.Version)

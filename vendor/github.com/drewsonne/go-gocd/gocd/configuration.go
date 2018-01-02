@@ -213,25 +213,24 @@ type Version struct {
 	CommitURL   string    `json:"commit_url"`
 }
 
-// Get will retrieve all agents, their status, and metadata from the GoCD Server.
-// Get returns a list of pipeline instanves describing the pipeline history.
-func (cs *ConfigurationService) Get(ctx context.Context) (*ConfigXML, *APIResponse, error) {
-	cx := ConfigXML{}
-	_, resp, err := cs.client.getAction(ctx, &APIClientRequest{
+// Get the config.xml document from the server and... render it as JSON... 'cause... eyugh.
+func (cs *ConfigurationService) Get(ctx context.Context) (cx *ConfigXML, resp *APIResponse, err error) {
+	cx = &ConfigXML{}
+	_, resp, err = cs.client.getAction(ctx, &APIClientRequest{
 		Path:         "admin/config.xml",
-		ResponseBody: &cx,
+		ResponseBody: cx,
 		ResponseType: responseTypeXML,
 	})
-	return &cx, resp, err
+	return
 }
 
-// GetVersion will return version information about the GoCD server.
-func (cs *ConfigurationService) GetVersion(ctx context.Context) (*Version, *APIResponse, error) {
-	v := Version{}
-	_, resp, err := cs.client.getAction(ctx, &APIClientRequest{
+// GetVersion of the GoCD server and other metadata about the software version.
+func (cs *ConfigurationService) GetVersion(ctx context.Context) (v *Version, resp *APIResponse, err error) {
+	v = &Version{}
+	_, resp, err = cs.client.getAction(ctx, &APIClientRequest{
 		Path:         "version",
-		ResponseBody: &v,
+		ResponseBody: v,
 		APIVersion:   apiV1,
 	})
-	return &v, resp, err
+	return
 }

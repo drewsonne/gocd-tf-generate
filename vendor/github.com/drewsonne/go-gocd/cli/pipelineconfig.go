@@ -3,10 +3,11 @@ package cli
 import (
 	"context"
 	"encoding/json"
-	"github.com/drewsonne/go-gocd/gocd"
-	"github.com/pkg/errors"
-	"github.com/urfave/cli"
+	"errors"
 	"io/ioutil"
+
+	"github.com/drewsonne/go-gocd/gocd"
+	"github.com/urfave/cli"
 )
 
 // List of command name and descriptions

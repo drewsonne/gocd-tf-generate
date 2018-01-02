@@ -6,13 +6,14 @@ func (p *Pipeline) GetStages() []*Stage {
 }
 
 // GetStage from the pipeline template
-func (p *Pipeline) GetStage(stageName string) *Stage {
-	for _, stage := range p.Stages {
-		if stage.Name == stageName {
-			return stage
+func (p *Pipeline) GetStage(stageName string) (stage *Stage) {
+	for _, s := range p.Stages {
+		if s.Name == stageName {
+			stage = s
+			break
 		}
 	}
-	return nil
+	return
 }
 
 // RemoveLinks from the pipeline object for json marshalling.

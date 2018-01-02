@@ -6,8 +6,8 @@ type Approval struct {
 	Authorization *Authorization `json:"authorization,omitempty"`
 }
 
-// Authorization describes the access control for a "manual" approval type. Specifies whoe (role or users) can approve
-// the job to move to the next stage of the pipeline.
+// Authorization describes the access control for a "manual" approval type. Specifies who (role or users) can approve
+// the job to move to the next stage in the pipeline.
 type Authorization struct {
 	Users []string `json:"users,omitempty"`
 	Roles []string `json:"roles,omitempty"`

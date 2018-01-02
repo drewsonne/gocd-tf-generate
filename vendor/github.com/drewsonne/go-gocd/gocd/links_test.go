@@ -24,7 +24,7 @@ func testLinkGetOk(t *testing.T) {
 	assert.True(t, ok)
 	assert.NotNil(t, l1)
 
-	l2, ok := l.GetOk("non-existance")
+	l2, ok := l.GetOk("non-existant")
 	assert.False(t, ok)
 	assert.Nil(t, l2)
 }

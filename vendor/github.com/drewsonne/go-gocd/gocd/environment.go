@@ -48,15 +48,15 @@ type PatchStringAction struct {
 }
 
 // List all environments
-func (es *EnvironmentsService) List(ctx context.Context) (*EnvironmentsResponse, *APIResponse, error) {
-	e := EnvironmentsResponse{}
-	_, resp, err := es.client.getAction(ctx, &APIClientRequest{
+func (es *EnvironmentsService) List(ctx context.Context) (e *EnvironmentsResponse, resp *APIResponse, err error) {
+	e = &EnvironmentsResponse{}
+	_, resp, err = es.client.getAction(ctx, &APIClientRequest{
 		Path:         "admin/environments",
-		ResponseBody: &e,
+		ResponseBody: e,
 		APIVersion:   apiV2,
 	})
 
-	return &e, resp, err
+	return
 }
 
 // Delete an environment
@@ -65,9 +65,8 @@ func (es *EnvironmentsService) Delete(ctx context.Context, name string) (string,
 }
 
 // Create an environment
-func (es *EnvironmentsService) Create(ctx context.Context, name string) (*Environment, *APIResponse, error) {
-	e := Environment{}
-	_, resp, err := es.client.postAction(ctx, &APIClientRequest{
+func (es *EnvironmentsService) Create(ctx context.Context, name string) (e *Environment, resp *APIResponse, err error) {
+	_, resp, err = es.client.postAction(ctx, &APIClientRequest{
 		Path: "admin/environments/",
 		RequestBody: Environment{
 			Name: name,
@@ -76,30 +75,30 @@ func (es *EnvironmentsService) Create(ctx context.Context, name string) (*Enviro
 		APIVersion:   apiV2,
 	})
 
-	return &e, resp, err
+	return
 }
 
 // Get a single environment by name
-func (es *EnvironmentsService) Get(ctx context.Context, name string) (*Environment, *APIResponse, error) {
-	e := Environment{}
-	_, resp, err := es.client.getAction(ctx, &APIClientRequest{
+func (es *EnvironmentsService) Get(ctx context.Context, name string) (e *Environment, resp *APIResponse, err error) {
+	e = &Environment{}
+	_, resp, err = es.client.getAction(ctx, &APIClientRequest{
 		Path:         "admin/environments/" + name,
-		ResponseBody: &e,
+		ResponseBody: e,
 		APIVersion:   apiV2,
 	})
 
-	return &e, resp, err
+	return
 }
 
 // Patch an environments configuration by adding or removing pipelines, agents, environment variables
-func (es *EnvironmentsService) Patch(ctx context.Context, name string, patch *EnvironmentPatchRequest) (*Environment, *APIResponse, error) {
-	env := Environment{}
-	_, resp, err := es.client.patchAction(ctx, &APIClientRequest{
+func (es *EnvironmentsService) Patch(ctx context.Context, name string, patch *EnvironmentPatchRequest) (e *Environment, resp *APIResponse, err error) {
+	e = &Environment{}
+	_, resp, err = es.client.patchAction(ctx, &APIClientRequest{
 		Path:         "admin/environments/" + name,
 		RequestBody:  patch,
-		ResponseBody: &env,
+		ResponseBody: e,
 		APIVersion:   apiV2,
 	})
 
-	return &env, resp, err
+	return
 }

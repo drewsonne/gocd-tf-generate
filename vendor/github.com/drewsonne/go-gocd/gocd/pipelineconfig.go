@@ -15,48 +15,48 @@ type PipelineConfigRequest struct {
 }
 
 // Get a single PipelineTemplate object in the GoCD API.
-func (pcs *PipelineConfigsService) Get(ctx context.Context, name string) (*Pipeline, *APIResponse, error) {
-	p := Pipeline{}
-	_, resp, err := pcs.client.getAction(ctx, &APIClientRequest{
+func (pcs *PipelineConfigsService) Get(ctx context.Context, name string) (p *Pipeline, resp *APIResponse, err error) {
+	p = &Pipeline{}
+	_, resp, err = pcs.client.getAction(ctx, &APIClientRequest{
 		Path:         "admin/pipelines/" + name,
 		APIVersion:   apiV4,
-		ResponseBody: &p,
+		ResponseBody: p,
 	})
 
-	return &p, resp, err
+	return
 }
 
 // Update a pipeline configuration
-func (pcs *PipelineConfigsService) Update(ctx context.Context, name string, p *Pipeline) (*Pipeline, *APIResponse, error) {
-	pr := Pipeline{}
+func (pcs *PipelineConfigsService) Update(ctx context.Context, name string, p *Pipeline) (pr *Pipeline, resp *APIResponse, err error) {
+	pr = &Pipeline{}
 
-	_, resp, err := pcs.client.putAction(ctx, &APIClientRequest{
+	_, resp, err = pcs.client.putAction(ctx, &APIClientRequest{
 		Path:       "admin/pipelines/" + name,
 		APIVersion: apiV4,
 		RequestBody: &PipelineConfigRequest{
 			Pipeline: p,
 		},
-		ResponseBody: &pr,
+		ResponseBody: pr,
 	})
 
-	return &pr, resp, err
+	return
 }
 
 // Create a pipeline configuration
-func (pcs *PipelineConfigsService) Create(ctx context.Context, group string, p *Pipeline) (*Pipeline, *APIResponse, error) {
+func (pcs *PipelineConfigsService) Create(ctx context.Context, group string, p *Pipeline) (pr *Pipeline, resp *APIResponse, err error) {
 
-	pc := Pipeline{}
-	_, resp, err := pcs.client.postAction(ctx, &APIClientRequest{
+	pr = &Pipeline{}
+	_, resp, err = pcs.client.postAction(ctx, &APIClientRequest{
 		Path:       "admin/pipelines",
 		APIVersion: apiV4,
 		RequestBody: &PipelineConfigRequest{
 			Group:    group,
 			Pipeline: p,
 		},
-		ResponseBody: &pc,
+		ResponseBody: pr,
 	})
 
-	return &pc, resp, err
+	return
 }
 
 // Delete a pipeline configuration

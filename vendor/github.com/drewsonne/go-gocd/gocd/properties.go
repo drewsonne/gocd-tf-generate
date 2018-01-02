@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
-	"strings"
 )
 
 // PropertiesService describes Actions which can be performed on agents
@@ -31,31 +29,31 @@ type PropertyCreateResponse struct {
 
 // List the properties for the given job/pipeline/stage run.
 func (ps *PropertiesService) List(ctx context.Context, pr *PropertyRequest) (*Properties, *APIResponse, error) {
-	path := fmt.Sprintf("/properties/%s/%d/%s/%d/%s",
+
+	ps.log.WithField("endpoint", "PropertiesServices.List").Info("Calling endpoint")
+	return ps.commonPropertiesAction(ctx, fmt.Sprintf("/properties/%s/%d/%s/%d/%s",
 		pr.Pipeline, pr.PipelineCounter,
 		pr.Stage, pr.StageCounter,
 		pr.Job,
-	)
-	log.Info("Calling `PropertiesServices.List`")
-	return ps.commonPropertiesAction(ctx, path, pr.Single)
+	), pr.Single)
 }
 
 // Get a specific property for the given job/pipeline/stage run.
 func (ps *PropertiesService) Get(ctx context.Context, name string, pr *PropertyRequest) (*Properties, *APIResponse, error) {
-	path := fmt.Sprintf("/properties/%s/%d/%s/%d/%s/%s",
+	ps.log.WithField("endpoint", "PropertiesServices.Get").Info("Calling endpoint")
+	return ps.commonPropertiesAction(ctx, fmt.Sprintf("/properties/%s/%d/%s/%d/%s/%s",
 		pr.Pipeline, pr.PipelineCounter,
 		pr.Stage, pr.StageCounter,
 		pr.Job, name,
-	)
-	return ps.commonPropertiesAction(ctx, path, true)
+	), true)
 }
 
 // Create a specific property for the given job/pipeline/stage run.
-func (ps *PropertiesService) Create(ctx context.Context, name string, value string, pr *PropertyRequest) (bool, *APIResponse, error) {
-
-	log.Info("Calling `PropertiesServices.Create`")
+func (ps *PropertiesService) Create(ctx context.Context, name string, value string, pr *PropertyRequest) (responseIsValid bool, resp *APIResponse, err error) {
 	responseBuffer := bytes.NewBuffer([]byte(""))
-	_, resp, err := ps.client.postAction(ctx, &APIClientRequest{
+
+	ps.log.WithField("endpoint", "PropertiesServices.Create").Info("Calling endpoint")
+	_, resp, err = ps.client.postAction(ctx, &APIClientRequest{
 		Path: fmt.Sprintf("/properties/%s/%d/%s/%d/%s/%s",
 			pr.Pipeline, pr.PipelineCounter,
 			pr.Stage, pr.StageCounter,
@@ -63,18 +61,15 @@ func (ps *PropertiesService) Create(ctx context.Context, name string, value stri
 		),
 		ResponseType: responseTypeText,
 		ResponseBody: responseBuffer,
-		RequestBody: strings.Join(
-			[]string{name, value},
-			"=",
-		),
+		RequestBody:  fmt.Sprintf("%s=%s", name, value),
 		Headers: map[string]string{
 			"Confirm": "true",
 		},
 	})
 	resp.Body = responseBuffer.String()
-	responseIsValid := resp.Body == fmt.Sprintf("Property '%s' created with value '%s'", name, value)
+	responseIsValid = resp.Body == fmt.Sprintf("Property '%s' created with value '%s'", name, value)
 
-	return responseIsValid, resp, err
+	return
 }
 
 // ListHistorical properties for a given pipeline, stage, job.
@@ -92,15 +87,15 @@ func (ps *PropertiesService) ListHistorical(ctx context.Context, pr *PropertyReq
 	return ps.commonPropertiesAction(ctx, "/properties/search", false)
 }
 
-func (ps *PropertiesService) commonPropertiesAction(ctx context.Context, path string, isDatum bool) (*Properties, *APIResponse, error) {
-	p := Properties{
+func (ps *PropertiesService) commonPropertiesAction(ctx context.Context, path string, isDatum bool) (p *Properties, resp *APIResponse, err error) {
+	p = &Properties{
 		UnmarshallWithHeader: true,
 		IsDatum:              isDatum,
 	}
-	_, resp, err := ps.client.getAction(ctx, &APIClientRequest{
+	_, resp, err = ps.client.getAction(ctx, &APIClientRequest{
 		Path:         path,
-		ResponseBody: &p,
+		ResponseBody: p,
 	})
 
-	return &p, resp, err
+	return
 }

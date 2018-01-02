@@ -1,13 +1,14 @@
 package cli
 
 import (
-	"github.com/drewsonne/go-gocd/gocd"
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
-	"github.com/urfave/cli"
+	"errors"
 	"net/http"
 	"net/url"
 	"testing"
+
+	"github.com/drewsonne/go-gocd/gocd"
+	"github.com/stretchr/testify/assert"
+	"github.com/urfave/cli"
 )
 
 func TestError(t *testing.T) {

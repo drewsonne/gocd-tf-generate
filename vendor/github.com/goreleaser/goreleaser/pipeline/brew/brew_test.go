@@ -2,6 +2,7 @@ package brew
 
 import (
 	"bytes"
+	"flag"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -9,12 +10,15 @@ import (
 
 	"github.com/goreleaser/goreleaser/config"
 	"github.com/goreleaser/goreleaser/context"
+	"github.com/goreleaser/goreleaser/internal/artifact"
 	"github.com/goreleaser/goreleaser/internal/testlib"
 	"github.com/stretchr/testify/assert"
 )
 
+var update = flag.Bool("update", false, "update .golden files")
+
 func TestDescription(t *testing.T) {
-	assert.NotEmpty(t, Pipe{}.Description())
+	assert.NotEmpty(t, Pipe{}.String())
 }
 
 func TestNameWithDash(t *testing.T) {
@@ -64,10 +68,12 @@ func TestFullFormulae(t *testing.T) {
 	assert.NoError(t, err)
 	formulae := out.String()
 
-	bts, err := ioutil.ReadFile("testdata/test.rb")
+	var golden = "testdata/test.rb.golden"
+	if *update {
+		ioutil.WriteFile(golden, []byte(formulae), 0655)
+	}
+	bts, err := ioutil.ReadFile(golden)
 	assert.NoError(t, err)
-	// ioutil.WriteFile("testdata/test.rb", []byte(formulae), 0644)
-
 	assert.Equal(t, string(bts), formulae)
 }
 
@@ -93,7 +99,8 @@ func TestRunPipe(t *testing.T) {
 		Git: context.GitInfo{
 			CurrentTag: "v1.0.1",
 		},
-		Version: "1.0.1",
+		Version:   "1.0.1",
+		Artifacts: artifact.New(),
 		Config: config.Project{
 			Dist:        folder,
 			ProjectName: "run-pipe",
@@ -124,55 +131,44 @@ func TestRunPipe(t *testing.T) {
 		Publish: true,
 	}
 	var path = filepath.Join(folder, "bin.tar.gz")
-	ctx.AddBinary("darwinamd64", "bin", "bin", path)
+	ctx.Artifacts.Add(artifact.Artifact{
+		Name:   "bin.tar.gz",
+		Path:   path,
+		Goos:   "darwin",
+		Goarch: "amd64",
+		Type:   artifact.UploadableArchive,
+	})
 	client := &DummyClient{}
 	assert.Error(t, doRun(ctx, client))
 	assert.False(t, client.CreatedFile)
 
 	_, err = os.Create(path)
 	assert.NoError(t, err)
-	assert.NoError(t, doRun(ctx, client))
-	assert.True(t, client.CreatedFile)
 
-	bts, err := ioutil.ReadFile("testdata/run_pipe.rb")
-	assert.NoError(t, err)
-	// ioutil.WriteFile("testdata/run_pipe.rb", []byte(client.Content), 0644)
+	t.Run("default git url", func(tt *testing.T) {
+		assert.NoError(tt, doRun(ctx, client))
+		assert.True(tt, client.CreatedFile)
+		var golden = "testdata/run_pipe.rb.golden"
+		if *update {
+			ioutil.WriteFile(golden, []byte(client.Content), 0655)
+		}
+		bts, err := ioutil.ReadFile(golden)
+		assert.NoError(tt, err)
+		assert.Equal(tt, string(bts), client.Content)
+	})
 
-	assert.Equal(t, string(bts), client.Content)
-}
-
-func TestRunPipeFormatOverride(t *testing.T) {
-	folder, err := ioutil.TempDir("", "goreleasertest")
-	assert.NoError(t, err)
-	var path = filepath.Join(folder, "bin.zip")
-	_, err = os.Create(path)
-	assert.NoError(t, err)
-	var ctx = &context.Context{
-		Config: config.Project{
-			Dist: folder,
-			Archive: config.Archive{
-				Format: "tar.gz",
-				FormatOverrides: []config.FormatOverride{
-					{
-						Format: "zip",
-						Goos:   "darwin",
-					},
-				},
-			},
-			Brew: config.Homebrew{
-				GitHub: config.Repo{
-					Owner: "test",
-					Name:  "test",
-				},
-			},
-		},
-		Publish: true,
-	}
-	ctx.AddBinary("darwinamd64", "bin", "bin", path)
-	client := &DummyClient{}
-	assert.NoError(t, doRun(ctx, client))
-	assert.True(t, client.CreatedFile)
-	assert.Contains(t, client.Content, "bin.zip")
+	t.Run("github enterprise url", func(tt *testing.T) {
+		ctx.Config.GitHubURLs.Download = "http://github.example.org"
+		assert.NoError(tt, doRun(ctx, client))
+		assert.True(tt, client.CreatedFile)
+		var golden = "testdata/run_pipe_enterprise.rb.golden"
+		if *update {
+			ioutil.WriteFile(golden, []byte(client.Content), 0644)
+		}
+		bts, err := ioutil.ReadFile(golden)
+		assert.NoError(tt, err)
+		assert.Equal(tt, string(bts), client.Content)
+	})
 }
 
 func TestRunPipeNoDarwin64Build(t *testing.T) {
@@ -195,6 +191,40 @@ func TestRunPipeNoDarwin64Build(t *testing.T) {
 	assert.False(t, client.CreatedFile)
 }
 
+func TestRunPipeMultipleDarwin64Build(t *testing.T) {
+	var ctx = context.New(
+		config.Project{
+			Archive: config.Archive{
+				Format: "tar.gz",
+			},
+			Brew: config.Homebrew{
+				GitHub: config.Repo{
+					Owner: "test",
+					Name:  "test",
+				},
+			},
+		},
+	)
+	ctx.Publish = true
+	ctx.Artifacts.Add(artifact.Artifact{
+		Name:   "bin1",
+		Path:   "doesnt mather",
+		Goos:   "darwin",
+		Goarch: "amd64",
+		Type:   artifact.UploadableArchive,
+	})
+	ctx.Artifacts.Add(artifact.Artifact{
+		Name:   "bin2",
+		Path:   "doesnt mather",
+		Goos:   "darwin",
+		Goarch: "amd64",
+		Type:   artifact.UploadableArchive,
+	})
+	client := &DummyClient{}
+	assert.Equal(t, ErrTooManyDarwin64Builds, doRun(ctx, client))
+	assert.False(t, client.CreatedFile)
+}
+
 func TestRunPipeBrewNotSetup(t *testing.T) {
 	var ctx = &context.Context{
 		Config:  config.Project{},
@@ -206,9 +236,8 @@ func TestRunPipeBrewNotSetup(t *testing.T) {
 }
 
 func TestRunPipeBinaryRelease(t *testing.T) {
-	var ctx = &context.Context{
-		Publish: true,
-		Config: config.Project{
+	var ctx = context.New(
+		config.Project{
 			Archive: config.Archive{
 				Format: "binary",
 			},
@@ -219,8 +248,15 @@ func TestRunPipeBinaryRelease(t *testing.T) {
 				},
 			},
 		},
-	}
-	ctx.AddBinary("darwinamd64", "foo", "bar", "baz")
+	)
+	ctx.Publish = true
+	ctx.Artifacts.Add(artifact.Artifact{
+		Name:   "bin",
+		Path:   "doesnt mather",
+		Goos:   "darwin",
+		Goarch: "amd64",
+		Type:   artifact.Binary,
+	})
 	client := &DummyClient{}
 	testlib.AssertSkipped(t, doRun(ctx, client))
 	assert.False(t, client.CreatedFile)
@@ -266,6 +302,40 @@ func TestRunPipeFormatBinary(t *testing.T) {
 	client := &DummyClient{}
 	testlib.AssertSkipped(t, doRun(ctx, client))
 	assert.False(t, client.CreatedFile)
+}
+
+func TestDefault(t *testing.T) {
+	_, back := testlib.Mktmp(t)
+	defer back()
+
+	var ctx = &context.Context{
+		Config: config.Project{
+			Builds: []config.Build{
+				{
+					Binary: "foo",
+					Goos:   []string{"linux", "darwin"},
+					Goarch: []string{"386", "amd64"},
+				},
+				{
+					Binary: "bar",
+					Goos:   []string{"linux", "darwin"},
+					Goarch: []string{"386", "amd64"},
+					Ignore: []config.IgnoredBuild{
+						{Goos: "darwin", Goarch: "amd64"},
+					},
+				},
+				{
+					Binary: "foobar",
+					Goos:   []string{"linux"},
+					Goarch: []string{"amd64"},
+				},
+			},
+		},
+	}
+	assert.NoError(t, Pipe{}.Default(ctx))
+	assert.NotEmpty(t, ctx.Config.Brew.CommitAuthor.Name)
+	assert.NotEmpty(t, ctx.Config.Brew.CommitAuthor.Email)
+	assert.Equal(t, `bin.install "foo"`, ctx.Config.Brew.Install)
 }
 
 type DummyClient struct {

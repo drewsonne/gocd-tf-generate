@@ -9,6 +9,14 @@ import (
 	"strings"
 )
 
+type csvUnmarshal interface {
+	UnmarshallCSV(raw string) error
+}
+
+type csvMarshal interface {
+	MarshallCSV() (string, error)
+}
+
 // Properties describes a properties resource in the GoCD API.
 type Properties struct {
 	UnmarshallWithHeader bool
@@ -97,14 +105,14 @@ func (pr *Properties) Write(p []byte) (n int, err error) {
 	numBytes := len(p)
 	raw, err := ioutil.ReadAll(bytes.NewReader(p))
 	if err != nil {
-		return 0, nil
+		return 0, err
 	}
 	pr.UnmarshallCSV(string(raw))
 
 	return numBytes, nil
 }
 
-// MarshallJSON converts the properties structure to a list of maps
+// MarshalJSON converts the properties structure to a list of maps
 func (pr *Properties) MarshalJSON() ([]byte, error) {
 	structures := make([]map[string]string, len(pr.DataFrame))
 

@@ -96,7 +96,8 @@ func testPipelineServiceCreate(t *testing.T) {
 		Name: "new_pipeline",
 		Materials: []Material{
 			{
-				Type: "git", Attributes: MaterialAttributes{
+				Type: "git",
+				Attributes: MaterialAttributesGit{
 					URL:          "git@github.com:sample_repo/example.git",
 					Destination:  "dest",
 					InvertFilter: false,

@@ -1,1 +1,0 @@
-FROM gocd/gocd-server:v17.10.0

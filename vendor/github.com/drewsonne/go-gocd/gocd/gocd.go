@@ -6,8 +6,8 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"fmt"
-	"github.com/pkg/errors"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -15,6 +15,8 @@ import (
 	"os"
 	"strings"
 	"sync"
+
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -74,6 +76,8 @@ type Client struct {
 
 	UserAgent string
 
+	Log *logrus.Logger
+
 	Agents            *AgentsService
 	PipelineGroups    *PipelineGroupsService
 	Stages            *StagesService
@@ -101,6 +105,7 @@ type PaginationResponse struct {
 // service is a generic service encapsulating the client for talking to the GoCD server.
 type service struct {
 	client *Client
+	log    *logrus.Logger
 }
 
 // Auth structure wrapping the Username and Password variables, which are used to get an Auth cookie header used for
@@ -127,11 +132,9 @@ func NewClient(cfg *Configuration, httpClient *http.Client) *Client {
 		httpClient = http.DefaultClient
 	}
 
-	if strings.HasPrefix(cfg.Server, "https") {
-		if cfg.SkipSslCheck {
-			httpClient.Transport = &http.Transport{
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: cfg.SkipSslCheck},
-			}
+	if strings.HasPrefix(cfg.Server, "https") && cfg.SkipSslCheck {
+		httpClient.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: cfg.SkipSslCheck},
 		}
 	}
 
@@ -141,9 +144,11 @@ func NewClient(cfg *Configuration, httpClient *http.Client) *Client {
 		client:    httpClient,
 		BaseURL:   baseURL,
 		UserAgent: userAgent,
+		Log:       logrus.New(),
 	}
 
 	c.common.client = c
+	c.common.log = c.Log
 
 	c.Username = cfg.Username
 	c.Password = cfg.Password
@@ -161,7 +166,7 @@ func NewClient(cfg *Configuration, httpClient *http.Client) *Client {
 	c.Environments = (*EnvironmentsService)(&c.common)
 	c.Properties = (*PropertiesService)(&c.common)
 
-	SetupLogging()
+	SetupLogging(c.Log)
 
 	return c
 }
@@ -177,13 +182,15 @@ func (c *Client) Unlock() {
 }
 
 // NewRequest creates an HTTP requests to the GoCD API endpoints.
-func (c *Client) NewRequest(method, urlStr string, body interface{}, apiVersion string) (*APIRequest, error) {
-	request := &APIRequest{}
+func (c *Client) NewRequest(method, urlStr string, body interface{}, apiVersion string) (req *APIRequest, err error) {
+	var rel *url.URL
+	var buf io.ReadWriter
+	req = &APIRequest{}
 
 	// I'm not sure how to get this method to return an error intentionally for testing. For testing purposes, I've
 	// added a switch so that the error handling in dependent methods can be tested.
 	if os.Getenv("GOCD_RAISE_ERROR_NEW_REQUEST") == "yes" {
-		return request, errors.New("Mock Testing Error")
+		return req, errors.New("Mock Testing Error")
 	}
 
 	// Some calls
@@ -192,9 +199,8 @@ func (c *Client) NewRequest(method, urlStr string, body interface{}, apiVersion 
 	} else {
 		urlStr = "api/" + urlStr
 	}
-	rel, err := url.Parse(urlStr)
-	if err != nil {
-		return request, err
+	if rel, err = url.Parse(urlStr); err != nil {
+		return req, err
 	}
 
 	u := c.BaseURL.ResolveReference(rel)
@@ -202,7 +208,6 @@ func (c *Client) NewRequest(method, urlStr string, body interface{}, apiVersion 
 		u.RawQuery = c.BaseURL.RawQuery
 	}
 
-	var buf io.ReadWriter
 	if body != nil {
 		buf = new(bytes.Buffer)
 
@@ -214,7 +219,7 @@ func (c *Client) NewRequest(method, urlStr string, body interface{}, apiVersion 
 			return nil, err
 		}
 		bdy, _ := ioutil.ReadAll(buf)
-		request.Body = string(bdy)
+		req.Body = string(bdy)
 
 		buf = new(bytes.Buffer)
 		enc = json.NewEncoder(buf)
@@ -222,29 +227,27 @@ func (c *Client) NewRequest(method, urlStr string, body interface{}, apiVersion 
 		enc.Encode(body)
 	}
 
-	req, err := http.NewRequest(method, u.String(), buf)
-	request.HTTP = req
-	if err != nil {
-		return request, err
+	if req.HTTP, err = http.NewRequest(method, u.String(), buf); err != nil {
+		return req, err
 	}
 
 	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
+		req.HTTP.Header.Set("Content-Type", "application/json")
 	}
 	if apiVersion != "" {
-		req.Header.Set("Accept", apiVersion)
+		req.HTTP.Header.Set("Accept", apiVersion)
 	}
-	req.Header.Set("User-Agent", c.UserAgent)
+	req.HTTP.Header.Set("User-Agent", c.UserAgent)
 
 	if c.cookie == "" {
 		if c.Username != "" && c.Password != "" {
-			req.SetBasicAuth(c.Username, c.Password)
+			req.HTTP.SetBasicAuth(c.Username, c.Password)
 		}
 	} else {
-		req.Header.Set("Cookie", c.cookie)
+		req.HTTP.Header.Set("Cookie", c.cookie)
 	}
 
-	return request, nil
+	return
 }
 
 // Do takes an HTTP request and resposne the response from the GoCD API endpoint.
@@ -269,49 +272,79 @@ func (c *Client) Do(ctx context.Context, req *APIRequest, v interface{}, respons
 		}
 	}
 
-	if err = CheckResponse(r.HTTP); err != nil {
+	if err = CheckResponse(r); err != nil {
 		return r, err
 	}
 
 	return r, err
 }
 
-func readDoResponseBody(v interface{}, body *io.ReadCloser, responseType string) (string, error) {
+func readDoResponseBody(v interface{}, bodyReader *io.ReadCloser, responseType string) (body string, err error) {
+	var bodyBytes []byte
 
 	if w, ok := v.(io.Writer); ok {
-		_, err := io.Copy(w, *body)
+		_, err := io.Copy(w, *bodyReader)
 		return "", err
 	}
 
-	bdy, err := ioutil.ReadAll(*body)
+	bodyBytes, err = ioutil.ReadAll(*bodyReader)
 	if responseType == responseTypeText {
-		strBody := string(bdy)
-		v = &strBody
+		body = string(bodyBytes)
+		v = &body
 	} else if responseType == responseTypeXML {
-		err = xml.Unmarshal(bdy, v)
+		err = xml.Unmarshal(bodyBytes, v)
 	} else {
-		err = json.Unmarshal(bdy, v)
+		err = json.Unmarshal(bodyBytes, v)
 	}
+
+	body = string(bodyBytes)
+
 	if err == io.EOF {
 		err = nil // ignore EOF errors caused by empty response body
-	} else if err != nil {
-		return "", nil
 	}
-	return string(bdy), nil
+	return
+
 }
 
 // CheckResponse asserts that the http response status code was 2xx.
-func CheckResponse(response *http.Response) error {
-	if response.StatusCode < 200 || response.StatusCode >= 400 {
-		bdy, err := ioutil.ReadAll(response.Body)
-		if err != nil {
-			return err
+func CheckResponse(response *APIResponse) (err error) {
+	if response.HTTP.StatusCode < 200 || response.HTTP.StatusCode >= 400 {
+
+		errorParts := []string{
+			fmt.Sprintf("Received HTTP Status '%s'", response.HTTP.Status),
 		}
-		return fmt.Errorf(
-			"Received HTTP Status '%s': '%s'",
-			response.Status,
-			bdy,
-		)
+		if message := createErrorResponseMessage(response.Body); message != "" {
+			errorParts = append(errorParts, message)
+		}
+
+		err = errors.New(strings.Join(errorParts, ": "))
 	}
-	return nil
+	return
+}
+
+func createErrorResponseMessage(body string) (resp string) {
+	reqBody := make(map[string]interface{})
+	resBody := make(map[string]interface{})
+
+	json.Unmarshal([]byte(body), &reqBody)
+
+	if message, hasMessage := reqBody["message"]; hasMessage {
+		resBody["message"] = message
+	}
+
+	if data, hasData := reqBody["data"]; hasData {
+		if data, isData := data.(map[string]interface{}); isData {
+			if err, hasErrors := data["errors"]; hasErrors {
+				resBody["errors"] = err
+			}
+		}
+	}
+
+	if len(resBody) > 0 {
+		b, _ := json.MarshalIndent(resBody, "", "  ")
+		resp = string(b)
+	}
+
+	return
+
 }

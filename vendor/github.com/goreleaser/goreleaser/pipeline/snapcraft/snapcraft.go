@@ -8,14 +8,16 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 
 	"github.com/apex/log"
-	"github.com/goreleaser/goreleaser/context"
-	"github.com/goreleaser/goreleaser/internal/linux"
-	"github.com/goreleaser/goreleaser/pipeline"
 	"golang.org/x/sync/errgroup"
 	yaml "gopkg.in/yaml.v2"
+
+	"github.com/goreleaser/goreleaser/context"
+	"github.com/goreleaser/goreleaser/internal/artifact"
+	"github.com/goreleaser/goreleaser/internal/filenametemplate"
+	"github.com/goreleaser/goreleaser/internal/linux"
+	"github.com/goreleaser/goreleaser/pipeline"
 )
 
 // ErrNoSnapcraft is shown when snapcraft cannot be found in $PATH
@@ -46,12 +48,22 @@ type AppMetadata struct {
 	Daemon  string   `yaml:",omitempty"`
 }
 
+const defaultNameTemplate = "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+
 // Pipe for snapcraft packaging
 type Pipe struct{}
 
-// Description of the pipe
-func (Pipe) Description() string {
-	return "Creating Linux packages with snapcraft"
+func (Pipe) String() string {
+	return "creating Linux packages with snapcraft"
+}
+
+// Default sets the pipe defaults
+func (Pipe) Default(ctx *context.Context) error {
+	var snap = &ctx.Config.Snapcraft
+	if snap.NameTemplate == "" {
+		snap.NameTemplate = defaultNameTemplate
+	}
+	return nil
 }
 
 // Run the pipe
@@ -71,28 +83,36 @@ func (Pipe) Run(ctx *context.Context) error {
 	}
 
 	var g errgroup.Group
-	for platform, groups := range ctx.Binaries {
-		if !strings.Contains(platform, "linux") {
-			log.WithField("platform", platform).Debug("skipped non-linux builds for snapcraft")
-			continue
-		}
+	for platform, binaries := range ctx.Artifacts.Filter(
+		artifact.And(
+			artifact.ByGoos("linux"),
+			artifact.ByType(artifact.Binary),
+		),
+	).GroupByPlatform() {
 		arch := linux.Arch(platform)
-		for folder, binaries := range groups {
-			g.Go(func() error {
-				return create(ctx, folder, arch, binaries)
-			})
-		}
+		binaries := binaries
+		g.Go(func() error {
+			return create(ctx, arch, binaries)
+		})
 	}
 	return g.Wait()
 }
 
-func create(ctx *context.Context, folder, arch string, binaries []context.Binary) error {
+func create(ctx *context.Context, arch string, binaries []artifact.Artifact) error {
 	var log = log.WithField("arch", arch)
+	folder, err := filenametemplate.Apply(
+		ctx.Config.Snapcraft.NameTemplate,
+		filenametemplate.NewFields(ctx, ctx.Config.Snapcraft.Replacements, binaries...),
+	)
+	if err != nil {
+		return err
+	}
 	// prime is the directory that then will be compressed to make the .snap package.
 	var folderDir = filepath.Join(ctx.Config.Dist, folder)
 	var primeDir = filepath.Join(folderDir, "prime")
 	var metaDir = filepath.Join(primeDir, "meta")
-	if err := os.MkdirAll(metaDir, 0755); err != nil {
+	// #nosec
+	if err = os.MkdirAll(metaDir, 0755); err != nil {
 		return err
 	}
 
@@ -128,7 +148,7 @@ func create(ctx *context.Context, folder, arch string, binaries []context.Binary
 		metadata.Apps[binary.Name] = appMetadata
 
 		destBinaryPath := filepath.Join(primeDir, filepath.Base(binary.Path))
-		if err := os.Link(binary.Path, destBinaryPath); err != nil {
+		if err = os.Link(binary.Path, destBinaryPath); err != nil {
 			return err
 		}
 	}
@@ -142,10 +162,18 @@ func create(ctx *context.Context, folder, arch string, binaries []context.Binary
 	}
 
 	var snap = filepath.Join(ctx.Config.Dist, folder+".snap")
+	/* #nosec */
 	var cmd = exec.Command("snapcraft", "snap", primeDir, "--output", snap)
 	if out, err = cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to generate snap package: %s", string(out))
 	}
-	ctx.AddArtifact(snap)
+	ctx.Artifacts.Add(artifact.Artifact{
+		Type:   artifact.LinuxPackage,
+		Name:   folder + ".snap",
+		Path:   snap,
+		Goos:   binaries[0].Goos,
+		Goarch: binaries[0].Goarch,
+		Goarm:  binaries[0].Goarm,
+	})
 	return nil
 }

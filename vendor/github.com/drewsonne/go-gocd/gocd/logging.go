@@ -1,10 +1,12 @@
 package gocd
 
 import (
-	log "github.com/Sirupsen/logrus"
 	"os"
+
+	"github.com/sirupsen/logrus"
 )
 
+// Set logging level and type constants
 const (
 	LogLevelEnvVarName = "GOCD_LOG_LEVEL"
 	LogLevelDefault    = "WARNING"
@@ -12,21 +14,21 @@ const (
 	LogTypeDefault     = "TEXT"
 )
 
-var logLevels = map[string]log.Level{
-	"PANIC":   log.PanicLevel,
-	"FATAL":   log.FatalLevel,
-	"ERROR":   log.ErrorLevel,
-	"WARNING": log.WarnLevel,
-	"INFO":    log.InfoLevel,
-	"DEBUG":   log.DebugLevel,
+var logLevels = map[string]logrus.Level{
+	"PANIC":   logrus.PanicLevel,
+	"FATAL":   logrus.FatalLevel,
+	"ERROR":   logrus.ErrorLevel,
+	"WARNING": logrus.WarnLevel,
+	"INFO":    logrus.InfoLevel,
+	"DEBUG":   logrus.DebugLevel,
 }
 
-var logFormat = map[string]log.Formatter{
-	"JSON": &log.JSONFormatter{},
-	"TEXT": &log.TextFormatter{},
+var logFormat = map[string]logrus.Formatter{
+	"JSON": &logrus.JSONFormatter{},
+	"TEXT": &logrus.TextFormatter{},
 }
 
-// Setup logging based on Environment Variables
+// SetupLogging based on Environment Variables
 //
 //  Set Logging level with $GOCD_LOG_LEVEL
 //  Allowed Values:
@@ -41,31 +43,28 @@ var logFormat = map[string]log.Formatter{
 //  Allowed Values:
 //    - JSON
 //    - TEXT
-func SetupLogging() {
+func SetupLogging(log *logrus.Logger) {
 	log.SetLevel(logLevels[getLogLevel()])
 
-	log.SetFormatter(logFormat[getLogType()])
+	log.Formatter = logFormat[getLogType()]
 }
 
 // Get the log type from env variables
-func getLogType() string {
-	logType := os.Getenv(LogTypeEnvVarName)
+func getLogType() (logType string) {
+	logType = os.Getenv(LogTypeEnvVarName)
 	if len(logType) == 0 {
 		// If no env is set, return the default
-		return LogTypeDefault
-	} else {
-		return logType
+		logType = LogTypeDefault
 	}
+	return
 }
 
 // Get the log level from env variables
-func getLogLevel() string {
-	loglevel := os.Getenv(LogLevelEnvVarName)
+func getLogLevel() (loglevel string) {
+	loglevel = os.Getenv(LogLevelEnvVarName)
 	if len(loglevel) == 0 {
 		// If no env is set, return the default
-		return LogLevelDefault
-	} else {
-		return loglevel
+		loglevel = LogLevelDefault
 	}
-
+	return
 }

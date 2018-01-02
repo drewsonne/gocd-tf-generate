@@ -94,7 +94,7 @@ func funcTestGenericHeadActionSuccess(t *testing.T) {
 	})
 
 	head, resp, err := client.genericHeadAction(context.Background(), "mock-head-success", apiV1)
-	assert.EqualError(t, err, "Received HTTP Status '400 Bad Request': ''")
+	assert.EqualError(t, err, "Received HTTP Status '400 Bad Request'")
 
 	assert.True(t, head)
 	assert.NotNil(t, resp)

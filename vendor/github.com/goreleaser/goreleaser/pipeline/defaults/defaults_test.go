@@ -10,7 +10,7 @@ import (
 )
 
 func TestDescription(t *testing.T) {
-	assert.NotEmpty(t, Pipe{}.Description())
+	assert.NotEmpty(t, Pipe{}.String())
 }
 
 func TestFillBasicData(t *testing.T) {
@@ -41,6 +41,7 @@ func TestFillBasicData(t *testing.T) {
 		ctx.Config.Archive.NameTemplate,
 		ctx.Config.Builds[0].Ldflags,
 		ctx.Config.Archive.Files,
+		ctx.Config.Dist,
 	)
 }
 
@@ -52,6 +53,7 @@ func TestFillPartial(t *testing.T) {
 
 	var ctx = &context.Context{
 		Config: config.Project{
+			Dist: "disttt",
 			Release: config.Release{
 				GitHub: config.Repo{
 					Owner: "goreleaser",
@@ -86,43 +88,5 @@ func TestFillPartial(t *testing.T) {
 	assert.NotEmpty(t, ctx.Config.Dockers[0].Goarch)
 	assert.NotEmpty(t, ctx.Config.Dockers[0].Dockerfile)
 	assert.Empty(t, ctx.Config.Dockers[0].Goarm)
-}
-
-func TestFillSingleBuild(t *testing.T) {
-	_, back := testlib.Mktmp(t)
-	defer back()
-	testlib.GitInit(t)
-	testlib.GitRemoteAdd(t, "git@github.com:goreleaser/goreleaser.git")
-
-	var ctx = &context.Context{
-		Config: config.Project{
-			SingleBuild: config.Build{
-				Main: "testreleaser",
-			},
-		},
-	}
-	assert.NoError(t, Pipe{}.Run(ctx))
-	assert.Len(t, ctx.Config.Builds, 1)
-	assert.Equal(t, ctx.Config.Builds[0].Binary, "goreleaser")
-}
-
-func TestNotAGitRepo(t *testing.T) {
-	_, back := testlib.Mktmp(t)
-	defer back()
-	testlib.GitInit(t)
-	var ctx = &context.Context{
-		Config: config.Project{},
-	}
-	assert.Error(t, Pipe{}.Run(ctx))
-	assert.Empty(t, ctx.Config.Release.GitHub.String())
-}
-
-func TestGitRepoWithoutRemote(t *testing.T) {
-	_, back := testlib.Mktmp(t)
-	defer back()
-	var ctx = &context.Context{
-		Config: config.Project{},
-	}
-	assert.Error(t, Pipe{}.Run(ctx))
-	assert.Empty(t, ctx.Config.Release.GitHub.String())
+	assert.Equal(t, "disttt", ctx.Config.Dist)
 }

@@ -9,12 +9,13 @@ import (
 
 	"github.com/goreleaser/goreleaser/config"
 	"github.com/goreleaser/goreleaser/context"
+	"github.com/goreleaser/goreleaser/internal/artifact"
 	"github.com/goreleaser/goreleaser/internal/testlib"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestDescription(t *testing.T) {
-	assert.NotEmpty(t, Pipe{}.Description())
+	assert.NotEmpty(t, Pipe{}.String())
 }
 
 func TestRunPipeNoFormats(t *testing.T) {
@@ -39,10 +40,12 @@ func TestRunPipe(t *testing.T) {
 		Version:     "1.0.0",
 		Parallelism: runtime.NumCPU(),
 		Debug:       true,
+		Artifacts:   artifact.New(),
 		Config: config.Project{
 			ProjectName: "mybin",
 			Dist:        dist,
 			FPM: config.FPM{
+				NameTemplate: defaultNameTemplate,
 				Formats:      []string{"deb", "rpm"},
 				Dependencies: []string{"make"},
 				Conflicts:    []string{"git"},
@@ -54,8 +57,16 @@ func TestRunPipe(t *testing.T) {
 			},
 		},
 	}
-	for _, plat := range []string{"linuxamd64", "linux386", "darwinamd64"} {
-		ctx.AddBinary(plat, "mybin", "mybin", binPath)
+	for _, goos := range []string{"linux", "darwin"} {
+		for _, goarch := range []string{"amd64", "386"} {
+			ctx.Artifacts.Add(artifact.Artifact{
+				Name:   "mybin",
+				Path:   binPath,
+				Goarch: goarch,
+				Goos:   goos,
+				Type:   artifact.Binary,
+			})
+		}
 	}
 	assert.NoError(t, Pipe{}.Run(ctx))
 }
@@ -78,6 +89,27 @@ func TestNoFPMInPath(t *testing.T) {
 	assert.EqualError(t, Pipe{}.Run(ctx), ErrNoFPM.Error())
 }
 
+func TestInvalidNameTemplate(t *testing.T) {
+	var ctx = &context.Context{
+		Parallelism: runtime.NumCPU(),
+		Artifacts:   artifact.New(),
+		Config: config.Project{
+			FPM: config.FPM{
+				NameTemplate: "{{.Foo}",
+				Formats: []string{"deb"},
+			},
+		},
+	}
+	ctx.Artifacts.Add(artifact.Artifact{
+		Name:   "mybin",
+		Goos:   "linux",
+		Goarch: "amd64",
+		Type:   artifact.Binary,
+	})
+	assert.Contains(t, Pipe{}.Run(ctx).Error(), `template: {{.Foo}:1: unexpected "}" in operand`)
+}
+
+
 func TestCreateFileDoesntExist(t *testing.T) {
 	folder, err := ioutil.TempDir("", "archivetest")
 	assert.NoError(t, err)
@@ -87,6 +119,7 @@ func TestCreateFileDoesntExist(t *testing.T) {
 	var ctx = &context.Context{
 		Version:     "1.0.0",
 		Parallelism: runtime.NumCPU(),
+		Artifacts:   artifact.New(),
 		Config: config.Project{
 			Dist: dist,
 			FPM: config.FPM{
@@ -97,19 +130,43 @@ func TestCreateFileDoesntExist(t *testing.T) {
 			},
 		},
 	}
-	ctx.AddBinary("linuxamd64", "mybin", "mybin", filepath.Join(dist, "mybin", "mybin"))
-	assert.Error(t, Pipe{}.Run(ctx))
+	ctx.Artifacts.Add(artifact.Artifact{
+		Name:   "mybin",
+		Path:   filepath.Join(dist, "mybin", "mybin"),
+		Goos:   "linux",
+		Goarch: "amd64",
+		Type:   artifact.Binary,
+	})
+	assert.Contains(t, Pipe{}.Run(ctx).Error(), `dist/mybin/mybin', does it exist?`)
 }
 
-func TestRunPipeWithExtraFiles(t *testing.T) {
+func TestCmd(t *testing.T) {
+	cmd := cmd([]string{"--help"})
+	assert.NotEmpty(t, cmd.Env)
+	assert.Contains(t, cmd.Env[0], gnuTarPath)
+}
+
+func TestDefault(t *testing.T) {
 	var ctx = &context.Context{
-		Version:     "1.0.0",
-		Parallelism: runtime.NumCPU(),
+		Config: config.Project{
+			FPM: config.FPM{},
+		},
+	}
+	assert.NoError(t, Pipe{}.Default(ctx))
+	assert.Equal(t, "/usr/local/bin", ctx.Config.FPM.Bindir)
+	assert.Equal(t, defaultNameTemplate, ctx.Config.FPM.NameTemplate)
+}
+
+func TestDefaultSet(t *testing.T) {
+	var ctx = &context.Context{
 		Config: config.Project{
 			FPM: config.FPM{
-				Formats: []string{"deb", "rpm"},
+				Bindir: "/bin",
+				NameTemplate: "foo",
 			},
 		},
 	}
-	assert.NoError(t, Pipe{}.Run(ctx))
+	assert.NoError(t, Pipe{}.Default(ctx))
+	assert.Equal(t, "/bin", ctx.Config.FPM.Bindir)
+	assert.Equal(t, "foo", ctx.Config.FPM.NameTemplate)
 }

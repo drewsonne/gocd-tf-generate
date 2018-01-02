@@ -4,6 +4,9 @@ TEST?=$$(go list ./... |grep -v 'vendor')
 
 GO_TARGETS= ./cli ./gocd ./gocd-*generator
 
+doc:
+	godoc2md github.com/drewsonne/go-gocd/gocd > gocd/README.md
+
 format:
 	gofmt -w -s .
 	$(MAKE) -C ./cli/ format
@@ -17,7 +20,7 @@ lint:
 test: lint
 	go tool vet $(GO_TARGETS)
 	go tool vet main.go
-	bash ./go.test.sh
+	bash scripts/go-test.sh
 	cat coverage.out
 #	$(MAKE) -C ./gocd test
 #	$(MAKE) -C ./cli test
@@ -26,9 +29,8 @@ before_install:
 	@go get -t -v $$(go list ./... | grep -v vendor/)
 	@go get github.com/golang/lint/golint
 	@go install github.com/golang/lint/golint
-#	curl -i https://api.github.com/user
-#	curl -i https://api.github.com/rate_limit
-	curl https://raw.githubusercontent.com/drewsonne/glide.sh/feature/github_auth_get/get | bash -x
+	curl https://glide.sh/get | sh
+	glide install
 
 build: deploy_on_develop
 

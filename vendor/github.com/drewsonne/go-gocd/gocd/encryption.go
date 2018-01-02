@@ -14,17 +14,17 @@ type CipherText struct {
 }
 
 // Encrypt takes a plaintext value and returns a cipher text.
-func (es *EncryptionService) Encrypt(ctx context.Context, plaintext string) (*CipherText, *APIResponse, error) {
+func (es *EncryptionService) Encrypt(ctx context.Context, plaintext string) (c *CipherText, resp *APIResponse, err error) {
 
-	c := CipherText{}
-	_, resp, err := es.client.postAction(ctx, &APIClientRequest{
+	c = &CipherText{}
+	_, resp, err = es.client.postAction(ctx, &APIClientRequest{
 		Path:         "admin/encrypt",
-		ResponseBody: &c,
+		ResponseBody: c,
 		RequestBody: &map[string]string{
 			"value": plaintext,
 		},
 		APIVersion: apiV1,
 	})
 
-	return &c, resp, err
+	return
 }

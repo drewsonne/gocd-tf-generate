@@ -106,12 +106,13 @@ type FormatOverride struct {
 
 // Archive config used for the archive
 type Archive struct {
-	Format          string            `yaml:",omitempty"`
-	FormatOverrides []FormatOverride  `yaml:"format_overrides,omitempty"`
-	NameTemplate    string            `yaml:"name_template,omitempty"`
-	WrapInDirectory bool              `yaml:"wrap_in_directory,omitempty"`
-	Replacements    map[string]string `yaml:",omitempty"`
-	Files           []string          `yaml:",omitempty"`
+	NameTemplate string            `yaml:"name_template,omitempty"`
+	Replacements map[string]string `yaml:",omitempty"`
+
+	Format          string           `yaml:",omitempty"`
+	FormatOverrides []FormatOverride `yaml:"format_overrides,omitempty"`
+	WrapInDirectory bool             `yaml:"wrap_in_directory,omitempty"`
+	Files           []string         `yaml:",omitempty"`
 
 	// Capture all undefined fields and should be empty after loading
 	XXX map[string]interface{} `yaml:",inline"`
@@ -129,6 +130,9 @@ type Release struct {
 
 // FPM config
 type FPM struct {
+	NameTemplate string            `yaml:"name_template,omitempty"`
+	Replacements map[string]string `yaml:",omitempty"`
+
 	Formats      []string          `yaml:",omitempty"`
 	Dependencies []string          `yaml:",omitempty"`
 	Conflicts    []string          `yaml:",omitempty"`
@@ -144,6 +148,14 @@ type FPM struct {
 	XXX map[string]interface{} `yaml:",inline"`
 }
 
+// Sign config
+type Sign struct {
+	Cmd       string   `yaml:"cmd,omitempty"`
+	Args      []string `yaml:"args,omitempty"`
+	Signature string   `yaml:"signature,omitempty"`
+	Artifacts string   `yaml:"artifacts,omitempty"`
+}
+
 // SnapcraftAppMetadata for the binaries that will be in the snap package
 type SnapcraftAppMetadata struct {
 	Plugs  []string
@@ -152,6 +164,9 @@ type SnapcraftAppMetadata struct {
 
 // Snapcraft config
 type Snapcraft struct {
+	NameTemplate string            `yaml:"name_template,omitempty"`
+	Replacements map[string]string `yaml:",omitempty"`
+
 	Name        string                          `yaml:",omitempty"`
 	Summary     string                          `yaml:",omitempty"`
 	Description string                          `yaml:",omitempty"`
@@ -181,14 +196,26 @@ type Checksum struct {
 
 // Docker image config
 type Docker struct {
-	Binary     string   `yaml:",omitempty"`
-	Goos       string   `yaml:",omitempty"`
-	Goarch     string   `yaml:",omitempty"`
-	Goarm      string   `yaml:",omitempty"`
-	Image      string   `yaml:",omitempty"`
-	Dockerfile string   `yaml:",omitempty"`
-	Latest     bool     `yaml:",omitempty"`
-	Files      []string `yaml:"extra_files,omitempty"`
+	Binary      string   `yaml:",omitempty"`
+	Goos        string   `yaml:",omitempty"`
+	Goarch      string   `yaml:",omitempty"`
+	Goarm       string   `yaml:",omitempty"`
+	Image       string   `yaml:",omitempty"`
+	Dockerfile  string   `yaml:",omitempty"`
+	Latest      bool     `yaml:",omitempty"`
+	TagTemplate string   `yaml:"tag_template,omitempty"`
+	Files       []string `yaml:"extra_files,omitempty"`
+
+	// Capture all undefined fields and should be empty after loading
+	XXX map[string]interface{} `yaml:",inline"`
+}
+
+// Artifactory server configuration
+type Artifactory struct {
+	Target   string `yaml:",omitempty"`
+	Name     string `yaml:",omitempty"`
+	Username string `yaml:",omitempty"`
+	Mode     string `yaml:",omitempty"`
 
 	// Capture all undefined fields and should be empty after loading
 	XXX map[string]interface{} `yaml:",inline"`
@@ -213,26 +240,26 @@ type Changelog struct {
 
 // Project includes all project configuration
 type Project struct {
-	ProjectName string    `yaml:"project_name,omitempty"`
-	Release     Release   `yaml:",omitempty"`
-	Brew        Homebrew  `yaml:",omitempty"`
-	Builds      []Build   `yaml:",omitempty"`
-	Archive     Archive   `yaml:",omitempty"`
-	FPM         FPM       `yaml:",omitempty"`
-	Snapcraft   Snapcraft `yaml:",omitempty"`
-	Snapshot    Snapshot  `yaml:",omitempty"`
-	Checksum    Checksum  `yaml:",omitempty"`
-	Dockers     []Docker  `yaml:",omitempty"`
-	Changelog   Changelog `yaml:",omitempty"`
+	ProjectName   string        `yaml:"project_name,omitempty"`
+	Release       Release       `yaml:",omitempty"`
+	Brew          Homebrew      `yaml:",omitempty"`
+	Builds        []Build       `yaml:",omitempty"`
+	Archive       Archive       `yaml:",omitempty"`
+	FPM           FPM           `yaml:",omitempty"`
+	Snapcraft     Snapcraft     `yaml:",omitempty"`
+	Snapshot      Snapshot      `yaml:",omitempty"`
+	Checksum      Checksum      `yaml:",omitempty"`
+	Dockers       []Docker      `yaml:",omitempty"`
+	Artifactories []Artifactory `yaml:",omitempty"`
+	Changelog     Changelog     `yaml:",omitempty"`
+	Dist          string        `yaml:",omitempty"`
+	Sign          Sign          `yaml:",omitempty"`
 
 	// this is a hack ¯\_(ツ)_/¯
 	SingleBuild Build `yaml:"build,omitempty"`
 
 	// should be set if using github enterprise
 	GitHubURLs GitHubURLs `yaml:"github_urls,omitempty"`
-
-	// test only property indicating the path to the dist folder
-	Dist string `yaml:"-"`
 
 	// Capture all undefined fields and should be empty after loading
 	XXX map[string]interface{} `yaml:",inline"`
@@ -290,6 +317,9 @@ func checkOverflows(config Project) error {
 	overflow.check(config.Checksum.XXX, "checksum")
 	for i, docker := range config.Dockers {
 		overflow.check(docker.XXX, fmt.Sprintf("docker[%d]", i))
+	}
+	for i, artifactory := range config.Artifactories {
+		overflow.check(artifactory.XXX, fmt.Sprintf("artifactory[%d]", i))
 	}
 	overflow.check(config.Changelog.XXX, "changelog")
 	overflow.check(config.Changelog.Filters.XXX, "changelog.filters")

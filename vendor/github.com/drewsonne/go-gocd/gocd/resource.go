@@ -29,8 +29,4 @@ type Versioned interface {
 type HALLink struct {
 	Name string
 	URL  *url.URL
-	//Name() string
-	//URL() *url.URL
 }
-
-//func (h *HALLink) GetOk(name string) ()

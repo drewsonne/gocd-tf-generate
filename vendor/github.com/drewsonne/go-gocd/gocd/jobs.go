@@ -11,10 +11,10 @@ const (
 	JobStateTransitionScheduled = "Scheduled"
 )
 
-// JobsService describes the HAL _link resource for the api response object for a job
+// JobsService describes actions which can be performed on jobs
 type JobsService service
 
-// Job describes a job object.
+// Job describes a job which can be performed in GoCD
 type Job struct {
 	AgentUUID            string                 `json:"agent_uuid,omitempty"`
 	Name                 string                 `json:"name"`
@@ -30,7 +30,7 @@ type Job struct {
 	StageCounter         string                 `json:"stage_counter,omitempty"`
 	StageName            string                 `json:"stage_name,omitempty"`
 	RunInstanceCount     int                    `json:"run_instance_count,omitempty"`
-	Timeout              int                    `json:"timeout,omitempty"`
+	Timeout              TimeoutField           `json:"timeout,omitempty"`
 	EnvironmentVariables []*EnvironmentVariable `json:"environment_variables,omitempty"`
 	Properties           []*JobProperty         `json:"properties,omitempty"`
 	Resources            []string               `json:"resources,omitempty"`
@@ -158,14 +158,18 @@ type JobScheduleLink struct {
 	HRef string `xml:"href,attr"`
 }
 
+// TimeoutField helps manage the marshalling of the timoeut field which can be both "never" and an integer
+type TimeoutField int
+
 // ListScheduled lists Pipeline groups
-func (js *JobsService) ListScheduled(ctx context.Context) ([]*JobSchedule, *APIResponse, error) {
-	jobs := JobScheduleResponse{}
-	_, resp, err := js.client.getAction(ctx, &APIClientRequest{
+func (js *JobsService) ListScheduled(ctx context.Context) (jobs []*JobSchedule, resp *APIResponse, err error) {
+	j := &JobScheduleResponse{}
+	_, resp, err = js.client.getAction(ctx, &APIClientRequest{
 		Path:         "jobs/scheduled.xml",
-		ResponseBody: &jobs,
+		ResponseBody: j,
 		ResponseType: responseTypeXML,
 	})
+	jobs = j.Jobs
 
-	return jobs.Jobs, resp, err
+	return
 }

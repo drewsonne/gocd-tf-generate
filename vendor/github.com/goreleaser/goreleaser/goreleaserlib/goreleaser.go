@@ -7,39 +7,56 @@ import (
 	"strings"
 
 	"github.com/apex/log"
+	"github.com/apex/log/handlers/cli"
+	yaml "gopkg.in/yaml.v2"
+
 	"github.com/goreleaser/goreleaser/config"
 	"github.com/goreleaser/goreleaser/context"
 	"github.com/goreleaser/goreleaser/pipeline"
 	"github.com/goreleaser/goreleaser/pipeline/archive"
+	"github.com/goreleaser/goreleaser/pipeline/artifactory"
 	"github.com/goreleaser/goreleaser/pipeline/brew"
 	"github.com/goreleaser/goreleaser/pipeline/build"
 	"github.com/goreleaser/goreleaser/pipeline/changelog"
 	"github.com/goreleaser/goreleaser/pipeline/checksums"
-	"github.com/goreleaser/goreleaser/pipeline/cleandist"
 	"github.com/goreleaser/goreleaser/pipeline/defaults"
+	"github.com/goreleaser/goreleaser/pipeline/dist"
 	"github.com/goreleaser/goreleaser/pipeline/docker"
+	"github.com/goreleaser/goreleaser/pipeline/effectiveconfig"
 	"github.com/goreleaser/goreleaser/pipeline/env"
 	"github.com/goreleaser/goreleaser/pipeline/fpm"
 	"github.com/goreleaser/goreleaser/pipeline/git"
 	"github.com/goreleaser/goreleaser/pipeline/release"
+	"github.com/goreleaser/goreleaser/pipeline/sign"
 	"github.com/goreleaser/goreleaser/pipeline/snapcraft"
-	yaml "gopkg.in/yaml.v2"
 )
 
-var pipes = []pipeline.Pipe{
-	defaults.Pipe{},  // load default configs
-	git.Pipe{},       // get and validate git repo state
-	changelog.Pipe{}, // builds the release changelog
-	env.Pipe{},       // load and validate environment variables
-	cleandist.Pipe{}, // ensure ./dist is clean
-	build.Pipe{},     // build
-	archive.Pipe{},   // archive (tar.gz, zip, etc)
-	fpm.Pipe{},       // archive via fpm (deb, rpm, etc)
-	snapcraft.Pipe{}, // archive via snapcraft (snap)
-	checksums.Pipe{}, // checksums of the files
-	docker.Pipe{},    // create and push docker images
-	release.Pipe{},   // release to github
-	brew.Pipe{},      // push to brew tap
+var (
+	normalPadding    = cli.Default.Padding
+	increasedPadding = normalPadding * 2
+)
+
+func init() {
+	log.SetHandler(cli.Default)
+}
+
+var pipes = []pipeline.Piper{
+	defaults.Pipe{},        // load default configs
+	dist.Pipe{},            // ensure ./dist is clean
+	git.Pipe{},             // get and validate git repo state
+	effectiveconfig.Pipe{}, // writes the actual config (with defaults et al set) to dist
+	changelog.Pipe{},       // builds the release changelog
+	env.Pipe{},             // load and validate environment variables
+	build.Pipe{},           // build
+	archive.Pipe{},         // archive (tar.gz, zip, etc)
+	fpm.Pipe{},             // archive via fpm (deb, rpm, etc)
+	snapcraft.Pipe{},       // archive via snapcraft (snap)
+	checksums.Pipe{},       // checksums of the files
+	sign.Pipe{},            // sign artifacts
+	docker.Pipe{},          // create and push docker images
+	artifactory.Pipe{},     // push to artifactory
+	release.Pipe{},         // release to github
+	brew.Pipe{},            // push to brew tap
 }
 
 // Flags interface represents an extractor of cli flags
@@ -89,12 +106,14 @@ func Release(flags Flags) error {
 	}
 	ctx.RmDist = flags.Bool("rm-dist")
 	for _, pipe := range pipes {
-		log.Infof("\033[1m%s\033[0m", strings.ToUpper(pipe.Description()))
+		cli.Default.Padding = normalPadding
+		log.Infof("\033[1m%s\033[0m", strings.ToUpper(pipe.String()))
+		cli.Default.Padding = increasedPadding
 		if err := handle(pipe.Run(ctx)); err != nil {
 			return err
 		}
 	}
-	log.Infof("\033[1mSUCCESS!\033[0m")
+	cli.Default.Padding = normalPadding
 	return nil
 }
 

@@ -5,10 +5,10 @@ import (
 	"fmt"
 )
 
-// AgentsService describes Actions which can be performed on agents
+// AgentsService describes actions which can be performed on agents
 type AgentsService service
 
-// AgentsResponse describes the structure of the API response when listing collections of agent object.
+// AgentsResponse describes the structure of the API response when listing collections of agent objects
 type AgentsResponse struct {
 	Links    *HALLinks `json:"_links,omitempty"`
 	Embedded *struct {
@@ -16,7 +16,7 @@ type AgentsResponse struct {
 	} `json:"_embedded,omitempty"`
 }
 
-// Agent represents agent in GoCD.
+// Agent represents agent in GoCD
 type Agent struct {
 	UUID             string        `json:"uuid,omitempty"`
 	Hostname         string        `json:"hostname,omitempty"`
@@ -65,9 +65,9 @@ type BuildDetails struct {
 }
 
 // List will retrieve all agents, their status, and metadata from the GoCD Server.
-func (s *AgentsService) List(ctx context.Context) ([]*Agent, *APIResponse, error) {
+func (s *AgentsService) List(ctx context.Context) (agents []*Agent, resp *APIResponse, err error) {
 	r := AgentsResponse{}
-	_, resp, err := s.client.getAction(ctx, &APIClientRequest{
+	_, resp, err = s.client.getAction(ctx, &APIClientRequest{
 		Path:         "agents",
 		ResponseBody: &r,
 		APIVersion:   apiV4,
@@ -76,8 +76,9 @@ func (s *AgentsService) List(ctx context.Context) ([]*Agent, *APIResponse, error
 	for _, agent := range r.Embedded.Agents {
 		agent.client = s.client
 	}
+	agents = r.Embedded.Agents
 
-	return r.Embedded.Agents, resp, err
+	return
 }
 
 // Get will retrieve a single agent based on the provided UUID.
@@ -96,38 +97,40 @@ func (s *AgentsService) Delete(ctx context.Context, uuid string) (string, *APIRe
 }
 
 // BulkUpdate will change the configuration for multiple agents in a single request.
-func (s *AgentsService) BulkUpdate(ctx context.Context, agents AgentBulkUpdate) (string, *APIResponse, error) {
+func (s *AgentsService) BulkUpdate(ctx context.Context, agents AgentBulkUpdate) (message string, resp *APIResponse, err error) {
 	a := StringResponse{}
-	_, resp, err := s.client.patchAction(ctx, &APIClientRequest{
+	_, resp, err = s.client.patchAction(ctx, &APIClientRequest{
 		Path:         "agents",
 		APIVersion:   apiV4,
 		ResponseBody: &a,
 		RequestBody:  agents,
 	})
-	return a.Message, resp, err
+	message = a.Message
+	return
 }
 
-// JobRunHistory will return a list of Jobs run on this agent.
-func (s *AgentsService) JobRunHistory(ctx context.Context, uuid string) ([]*Job, *APIResponse, error) {
+// JobRunHistory will return a list of Jobs run on the agent identified by `uuid`.
+func (s *AgentsService) JobRunHistory(ctx context.Context, uuid string) (jobs []*Job, resp *APIResponse, err error) {
 	a := JobRunHistoryResponse{}
-	_, resp, err := s.client.getAction(ctx, &APIClientRequest{
+	_, resp, err = s.client.getAction(ctx, &APIClientRequest{
 		Path:         fmt.Sprintf("agents/%s/job_run_history", uuid),
 		APIVersion:   apiV4,
 		ResponseBody: &a,
 	})
-	return a.Jobs, resp, err
+	jobs = a.Jobs
+	return
 }
 
-// handleAgentRequest handles the flow to perform an HTTP action on an agent resource.
-func (s *AgentsService) handleAgentRequest(ctx context.Context, action string, uuid string, agent *Agent) (*Agent, *APIResponse, error) {
-	a := Agent{client: s.client}
-	_, resp, err := s.client.httpAction(ctx, &APIClientRequest{
+func (s *AgentsService) handleAgentRequest(ctx context.Context, action string, uuid string, agent *Agent) (a *Agent, resp *APIResponse, err error) {
+	a = &Agent{}
+	_, resp, err = s.client.httpAction(ctx, &APIClientRequest{
 		Method:       action,
 		Path:         "agents/" + uuid,
 		APIVersion:   apiV4,
 		RequestBody:  agent,
-		ResponseBody: &a,
+		ResponseBody: a,
 	})
+	a.client = s.client
 
-	return &a, resp, err
+	return
 }

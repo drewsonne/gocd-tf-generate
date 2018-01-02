@@ -1,34 +1,34 @@
-// Package brew implements the Pipe, providing formula generation and
-// uploading it to a configured repo.
 package brew
 
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"text/template"
 
 	"github.com/apex/log"
+
 	"github.com/goreleaser/goreleaser/checksum"
+	"github.com/goreleaser/goreleaser/config"
 	"github.com/goreleaser/goreleaser/context"
-	"github.com/goreleaser/goreleaser/internal/archiveformat"
+	"github.com/goreleaser/goreleaser/internal/artifact"
 	"github.com/goreleaser/goreleaser/internal/client"
 	"github.com/goreleaser/goreleaser/pipeline"
 )
 
-// ErrNoDarwin64Build when there is no build for darwin_amd64 (goos doesn't
-// contain darwin and/or goarch doesn't contain amd64)
-var ErrNoDarwin64Build = errors.New("brew tap requires a darwin amd64 build")
+// ErrNoDarwin64Build when there is no build for darwin_amd64
+var ErrNoDarwin64Build = errors.New("brew tap requires one darwin amd64 build")
 
-const platform = "darwinamd64"
+// ErrTooManyDarwin64Builds when there are too many builds for darwin_amd64
+var ErrTooManyDarwin64Builds = errors.New("brew tap requires at most one darwin amd64 build")
 
 // Pipe for brew deployment
 type Pipe struct{}
 
-// Description of the pipe
-func (Pipe) Description() string {
-	return "Creating homebrew formula"
+func (Pipe) String() string {
+	return "creating homebrew formula"
 }
 
 // Run the pipe
@@ -38,6 +38,49 @@ func (Pipe) Run(ctx *context.Context) error {
 		return err
 	}
 	return doRun(ctx, client)
+}
+
+// Default sets the pipe defaults
+func (Pipe) Default(ctx *context.Context) error {
+	if ctx.Config.Brew.Install == "" {
+		var installs []string
+		for _, build := range ctx.Config.Builds {
+			if !isBrewBuild(build) {
+				continue
+			}
+			installs = append(
+				installs,
+				fmt.Sprintf(`bin.install "%s"`, build.Binary),
+			)
+		}
+		ctx.Config.Brew.Install = strings.Join(installs, "\n")
+	}
+
+	if ctx.Config.Brew.CommitAuthor.Name == "" {
+		ctx.Config.Brew.CommitAuthor.Name = "goreleaserbot"
+	}
+	if ctx.Config.Brew.CommitAuthor.Email == "" {
+		ctx.Config.Brew.CommitAuthor.Email = "goreleaser@carlosbecker.com"
+	}
+	return nil
+}
+
+func isBrewBuild(build config.Build) bool {
+	for _, ignore := range build.Ignore {
+		if ignore.Goos == "darwin" && ignore.Goarch == "amd64" {
+			return false
+		}
+	}
+	return contains(build.Goos, "darwin") && contains(build.Goarch, "amd64")
+}
+
+func contains(ss []string, s string) bool {
+	for _, zs := range ss {
+		if zs == s {
+			return true
+		}
+	}
+	return false
 }
 
 func doRun(ctx *context.Context, client client.Client) error {
@@ -54,28 +97,33 @@ func doRun(ctx *context.Context, client client.Client) error {
 		return pipeline.Skip("archive format is binary")
 	}
 
-	var group = ctx.Binaries["darwinamd64"]
-	if group == nil {
+	var archives = ctx.Artifacts.Filter(
+		artifact.And(
+			artifact.ByGoos("darwin"),
+			artifact.ByGoarch("amd64"),
+			artifact.ByGoarm(""),
+			artifact.ByType(artifact.UploadableArchive),
+		),
+	).List()
+	if len(archives) == 0 {
 		return ErrNoDarwin64Build
 	}
-	var folder string
-	for f := range group {
-		folder = f
-		break
+	if len(archives) > 1 {
+		return ErrTooManyDarwin64Builds
 	}
 	var path = filepath.Join(ctx.Config.Brew.Folder, ctx.Config.ProjectName+".rb")
 	log.WithField("formula", path).
 		WithField("repo", ctx.Config.Brew.GitHub.String()).
 		Info("pushing")
-	content, err := buildFormula(ctx, client, folder)
+	content, err := buildFormula(ctx, client, archives[0])
 	if err != nil {
 		return err
 	}
 	return client.CreateFile(ctx, content, path)
 }
 
-func buildFormula(ctx *context.Context, client client.Client, folder string) (bytes.Buffer, error) {
-	data, err := dataFor(ctx, client, folder)
+func buildFormula(ctx *context.Context, client client.Client, artifact artifact.Artifact) (bytes.Buffer, error) {
+	data, err := dataFor(ctx, client, artifact)
 	if err != nil {
 		return bytes.Buffer{}, err
 	}
@@ -91,9 +139,8 @@ func doBuildFormula(data templateData) (out bytes.Buffer, err error) {
 	return
 }
 
-func dataFor(ctx *context.Context, client client.Client, folder string) (result templateData, err error) {
-	var file = folder + "." + archiveformat.For(ctx, platform)
-	sum, err := checksum.SHA256(filepath.Join(ctx.Config.Dist, file))
+func dataFor(ctx *context.Context, client client.Client, artifact artifact.Artifact) (result templateData, err error) {
+	sum, err := checksum.SHA256(artifact.Path)
 	if err != nil {
 		return
 	}
@@ -110,7 +157,7 @@ func dataFor(ctx *context.Context, client client.Client, folder string) (result 
 		Tag:          ctx.Git.CurrentTag,
 		Version:      ctx.Version,
 		Caveats:      ctx.Config.Brew.Caveats,
-		File:         file,
+		File:         artifact.Name,
 		SHA256:       sum,
 		Dependencies: ctx.Config.Brew.Dependencies,
 		Conflicts:    ctx.Config.Brew.Conflicts,

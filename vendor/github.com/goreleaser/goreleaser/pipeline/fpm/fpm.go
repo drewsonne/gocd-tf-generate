@@ -4,27 +4,48 @@ package fpm
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"github.com/apex/log"
-	"github.com/goreleaser/goreleaser/context"
-	"github.com/goreleaser/goreleaser/internal/linux"
-	"github.com/goreleaser/goreleaser/pipeline"
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/goreleaser/goreleaser/context"
+	"github.com/goreleaser/goreleaser/internal/artifact"
+	"github.com/goreleaser/goreleaser/internal/filenametemplate"
+	"github.com/goreleaser/goreleaser/internal/linux"
+	"github.com/goreleaser/goreleaser/pipeline"
 )
 
 // ErrNoFPM is shown when fpm cannot be found in $PATH
 var ErrNoFPM = errors.New("fpm not present in $PATH")
 
+const (
+	defaultNameTemplate = "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+	// path to gnu-tar on macOS when installed with homebrew
+	gnuTarPath = "/usr/local/opt/gnu-tar/libexec/gnubin"
+)
+
 // Pipe for fpm packaging
 type Pipe struct{}
 
-// Description of the pipe
-func (Pipe) Description() string {
-	return "Creating Linux packages with fpm"
+func (Pipe) String() string {
+	return "creating Linux packages with fpm"
+}
+
+// Default sets the pipe defaults
+func (Pipe) Default(ctx *context.Context) error {
+	var fpm = &ctx.Config.FPM
+	if fpm.Bindir == "" {
+		fpm.Bindir = "/usr/local/bin"
+	}
+	if fpm.NameTemplate == "" {
+		fpm.NameTemplate = defaultNameTemplate
+	}
+	return nil
 }
 
 // Run the pipe
@@ -43,29 +64,36 @@ func doRun(ctx *context.Context) error {
 	var g errgroup.Group
 	sem := make(chan bool, ctx.Parallelism)
 	for _, format := range ctx.Config.FPM.Formats {
-		for platform, groups := range ctx.Binaries {
-			if !strings.Contains(platform, "linux") {
-				log.WithField("platform", platform).Debug("skipped non-linux builds for fpm")
-				continue
-			}
+		for platform, artifacts := range ctx.Artifacts.Filter(
+			artifact.And(
+				artifact.ByType(artifact.Binary),
+				artifact.ByGoos("linux"),
+			),
+		).GroupByPlatform() {
 			sem <- true
 			format := format
 			arch := linux.Arch(platform)
-			for folder, binaries := range groups {
-				g.Go(func() error {
-					defer func() {
-						<-sem
-					}()
-					return create(ctx, format, folder, arch, binaries)
-				})
-			}
+			artifacts := artifacts
+			g.Go(func() error {
+				defer func() {
+					<-sem
+				}()
+				return create(ctx, format, arch, artifacts)
+			})
 		}
 	}
 	return g.Wait()
 }
 
-func create(ctx *context.Context, format, folder, arch string, binaries []context.Binary) error {
-	var path = filepath.Join(ctx.Config.Dist, folder)
+func create(ctx *context.Context, format, arch string, binaries []artifact.Artifact) error {
+	name, err := filenametemplate.Apply(
+		ctx.Config.FPM.NameTemplate,
+		filenametemplate.NewFields(ctx, ctx.Config.FPM.Replacements, binaries...),
+	)
+	if err != nil {
+		return err
+	}
+	var path = filepath.Join(ctx.Config.Dist, name)
 	var file = path + "." + format
 	var log = log.WithField("format", format).WithField("arch", arch)
 	dir, err := ioutil.TempDir("", "fpm")
@@ -100,11 +128,31 @@ func create(ctx *context.Context, format, folder, arch string, binaries []contex
 	}
 
 	log.WithField("args", options).Debug("creating fpm package")
-	if out, err := exec.Command("fpm", options...).CombinedOutput(); err != nil {
+	if out, err := cmd(options).CombinedOutput(); err != nil {
 		return errors.Wrap(err, string(out))
 	}
-	ctx.AddArtifact(file)
+	ctx.Artifacts.Add(artifact.Artifact{
+		Type:   artifact.LinuxPackage,
+		Name:   name + "." + format,
+		Path:   file,
+		Goos:   binaries[0].Goos,
+		Goarch: binaries[0].Goarch,
+		Goarm:  binaries[0].Goarm,
+	})
 	return nil
+}
+
+func cmd(options []string) *exec.Cmd {
+	/* #nosec */
+	var cmd = exec.Command("fpm", options...)
+	cmd.Env = []string{fmt.Sprintf("PATH=%s:%s", gnuTarPath, os.Getenv("PATH"))}
+	for _, env := range os.Environ() {
+		if strings.HasPrefix(env, "PATH=") {
+			continue
+		}
+		cmd.Env = append(cmd.Env, env)
+	}
+	return cmd
 }
 
 func basicOptions(ctx *context.Context, workdir, format, arch, file string) []string {

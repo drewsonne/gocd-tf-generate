@@ -1,34 +1,46 @@
 package release
 
 import (
+	"flag"
 	"io/ioutil"
 	"os"
 	"testing"
 
+	"github.com/goreleaser/goreleaser/config"
 	"github.com/goreleaser/goreleaser/context"
+	"github.com/goreleaser/goreleaser/internal/artifact"
 	"github.com/stretchr/testify/assert"
 )
 
+var update = flag.Bool("update", false, "update .golden files")
+
 func TestDescribeBody(t *testing.T) {
 	var changelog = "\nfeature1: description\nfeature2: other description"
-	var ctx = &context.Context{
-		ReleaseNotes: changelog,
-		Dockers: []string{
-			"goreleaser/goreleaser:0.40.0",
-			"goreleaser/godownloader:0.1.0",
-		},
+	var ctx = context.New(config.Project{})
+	ctx.ReleaseNotes = changelog
+	for _, d := range []string{
+		"goreleaser/goreleaser:0.40.0",
+		"goreleaser/goreleaser:latest",
+		"goreleaser/godownloader:v0.1.0",
+	} {
+		ctx.Artifacts.Add(artifact.Artifact{
+			Name: d,
+			Type: artifact.DockerImage,
+		})
 	}
 	out, err := describeBodyVersion(ctx, "go version go1.9 darwin/amd64")
 	assert.NoError(t, err)
 
-	bts, err := ioutil.ReadFile("testdata/release1.txt")
+	var golden = "testdata/release1.golden"
+	if *update {
+		ioutil.WriteFile(golden, out.Bytes(), 0755)
+	}
+	bts, err := ioutil.ReadFile(golden)
 	assert.NoError(t, err)
-	// ioutil.WriteFile("testdata/release1.txt", out.Bytes(), 0755)
-
 	assert.Equal(t, string(bts), out.String())
 }
 
-func TestDescribeBodyNoDockerImages(t *testing.T) {
+func TestDescribeBodyNoDockerImagesNoBrews(t *testing.T) {
 	var changelog = "\nfeature1: description\nfeature2: other description"
 	var ctx = &context.Context{
 		ReleaseNotes: changelog,
@@ -36,9 +48,12 @@ func TestDescribeBodyNoDockerImages(t *testing.T) {
 	out, err := describeBodyVersion(ctx, "go version go1.9 darwin/amd64")
 	assert.NoError(t, err)
 
-	bts, err := ioutil.ReadFile("testdata/release2.txt")
+	var golden = "testdata/release2.golden"
+	if *update {
+		ioutil.WriteFile(golden, out.Bytes(), 0655)
+	}
+	bts, err := ioutil.ReadFile(golden)
 	assert.NoError(t, err)
-	// ioutil.WriteFile("testdata/release2.txt", out.Bytes(), 0755)
 
 	assert.Equal(t, string(bts), out.String())
 }
