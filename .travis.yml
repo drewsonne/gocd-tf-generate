@@ -17,12 +17,14 @@ matrix:
     - go: tip
   fast_finish: true
 
-#before_install:
-#  - make before_install
+before_install:
+ - curl https://glide.sh/get | sh
 
-#script:
-#  - go generate -x $(go list ./... | grep -v vendor/) && git diff --exit-code; code=$?; git checkout -- .; (exit	$code)
-#  - make test
+install:
+  - glide install
+
+script:
+  - go test $(glide novendor)
 
 after_success:
   - go get github.com/goreleaser/goreleaser

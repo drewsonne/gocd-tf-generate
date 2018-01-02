@@ -1,27 +1,33 @@
-hash: cda3b9b76a4963ea17a6d17f863e6f676e835d87294901747236f3564f67e07f
-updated: 2017-11-14T10:39:48.432902956Z
+hash: 385ff43b3340653f70b9a304bb12138cf158f4e6fd4f9ae48b92600b1ff26118
+updated: 2018-01-02T20:40:20.513885213Z
 imports:
 - name: github.com/drewsonne/go-gocd
-  version: a6ae84643dc3f9738e5f928978fedc49859da5fc
+  version: eda8abf4a0f36a2c6e82a04e829bd4060e843f05
   subpackages:
   - gocd
-- name: github.com/pkg/errors
-  version: 645ef00459ed84a119197bfb8d8205042c6df63d
-- name: github.com/Sirupsen/logrus
-  version: 89742aefa4b206dcf400792f3bd35b542998eb3b
+- name: github.com/sirupsen/logrus
+  version: d682213848ed68c0a260ca37d6dd5ace8423f5ba
 - name: golang.org/x/crypto
-  version: 9f005a07e0d31d45e6656d241bb5c0f2efd4bc94
+  version: 95a4943f35d008beabde8c11e5075a1b714e6419
   subpackages:
   - ssh/terminal
 - name: golang.org/x/sys
-  version: 665f6529cca930e27b831a0d1dafffbe1c172924
+  version: 83801418e1b59fb1880e363299581ee543af32ca
   subpackages:
   - unix
   - windows
 - name: gopkg.in/yaml.v2
-  version: eb3733d160e74a9c7e442f435eb3bea458e1d19f
+  version: 287cf08546ab5e7e37d55a84f7ed3fd1db036de5
 testImports:
-- name: github.com/goreleaser/goreleaser
-  version: adc2d7d4c572af20cc20290db48b664f12c158bb
+- name: github.com/davecgh/go-spew
+  version: 6d212800a42e8ab5c146b8ace3490ee17e5225f9
+  subpackages:
+  - spew
+- name: github.com/pmezard/go-difflib
+  version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
+  subpackages:
+  - difflib
+- name: github.com/stretchr/testify
+  version: b91bfb9ebec76498946beb6af7c0230c7cc7ba6c
   subpackages:
   - assert
