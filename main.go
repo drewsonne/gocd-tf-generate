@@ -27,6 +27,11 @@ func main() {
 	flag.BoolVar(&printVersion, "version", false, "Print version and exit")
 	flag.Parse()
 
+	if len(os.Args) < 2 {
+		flag.Usage()
+		return
+	}
+
 	if (printVersion) {
 		fmt.Printf("gocd-tf-generate '%s'", Version)
 		return
