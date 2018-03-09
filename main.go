@@ -18,7 +18,7 @@ func main() {
 	var outputToFile, debug, printVersion bool
 	flag.StringVar(&resource, "resource", "",
 		"Name of the resource to generate tf config for. Use '*' for all resources. Default: * ."+
-			"Allowed Values: (pipeline_template)")
+			"Allowed Values: (pipeline_template, pipeline)")
 	flag.StringVar(&id, "id", "*",
 		"Specify the ID of the resource to generate a specific resource. Omit this to generate all.")
 	flag.StringVar(&profile, "profile", "default", "Specify the gocd profile to use.")
